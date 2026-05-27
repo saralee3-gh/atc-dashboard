@@ -280,9 +280,26 @@ let sortCol = '', sortDir = 1, searchVal = '', filterRet = 'all';
 // ═══════════════════════════════════════════
 const YEARS_CE = [2026,2027,2028,2029,2030,2031,2032,2033,2034,2035];
 
+// Position tag — maps ชื่อย่อ pattern to pill style
 function posTag(p) {
-  const m = {'ผจก.':'pill-blue','ATC ๑':'pill-green','ATC ๒':'pill-gray','ATC ๓':'pill-teal'};
-  return `<span class="pill ${m[p]||'pill-gray'}">${p}</span>`;
+  if (!p) return '<span class="pill pill-gray">—</span>';
+  const s = p.toString();
+  // Manager / ผจก. level 10
+  if (s.includes('ผจก') || s.includes('Mgr') || s.includes('Manager'))
+    return `<span class="pill pill-blue">${s}</span>`;
+  // ATC 1 (levels 6,8)
+  if (s.includes('ATC ๑') || s.includes('ATC 1'))
+    return `<span class="pill pill-green">${s}</span>`;
+  // ATC 2 (level 7 prov, 9)
+  if (s.includes('ATC ๒') || s.includes('ATC 2'))
+    return `<span class="pill pill-gray">${s}</span>`;
+  // ATC 3 (level 9)
+  if (s.includes('ATC ๓') || s.includes('ATC 3'))
+    return `<span class="pill pill-teal">${s}</span>`;
+  // Assistant Manager (level 9)
+  if (s.includes('ผช') || s.includes('Asst'))
+    return `<span class="pill pill-purple">${s}</span>`;
+  return `<span class="pill pill-gray">${s}</span>`;
 }
 function statusTag(s) {
   if(!s||s==='-') return '';
@@ -291,8 +308,19 @@ function statusTag(s) {
   if(s.includes('รอหลักสูตร')) return `<span class="pill pill-purple">${s}</span>`;
   return `<span class="pill pill-gray">${s}</span>`;
 }
+// Position label lookup by level — built from ATCO_POSITION.xlsx
+const LV_LABEL = {
+  5:  'ATC Student',
+  6:  'ATC 1 (Prov ARD)',
+  7:  'ATC Trainee',
+  8:  'ATC 1',
+  9:  'ATC 2/3',
+  10: 'ATC Manager',
+};
 function lvTag(lv) {
-  return lv==='Lv.7'?'<span class="pill pill-amber">Lv.7 ส่วนกลาง</span>':'<span class="pill pill-green">Lv.5 ภูมิภาค</span>';
+  return lv==='Lv.7'
+    ? '<span class="pill pill-amber">Lv.7 · ATC Trainee</span>'
+    : '<span class="pill pill-green">Lv.5 · ATC Student</span>';
 }
 function sortData(data, col) {
   if(!col) return data;
@@ -735,68 +763,1345 @@ function onFilterRet(v){filterRet=v;renderStaffList(DATA.locations.find(l=>l.id=
 // PAGE 3: COURSE
 // ═══════════════════════════════════════════
 const COURSES = [
-  {code:'ACS (Surv.)',name:'Area Control Surveillance — BACC Unit Endorsement',sangkad:'ศจ.',level:7,count:24,theory_start:'2024-10-06',theory_end:'2024-11-28',ojt_start:'2025-02-28',ojt_end:'2025-09-29',rating:'2026-08-31',progress:90},
-  {code:'ACS (Surv. R)',name:'Area Control Surveillance Rating',sangkad:'ศจ.',level:7,count:24,theory_start:'2025-03-02',theory_end:'2025-04-29',ojt_start:'2025-05-31',ojt_end:'2026-02-27',rating:'2026-07-31',progress:95},
-  {code:'ACP',name:'Area Control Procedural — BACC Unit Endorsement',sangkad:'ศจ.',level:7,count:26,theory_start:'2025-10-19',theory_end:'2026-01-08',ojt_start:'2026-01-09',ojt_end:'2026-12-30',rating:'2028-01-30',progress:35},
-  {code:'Senior ACP',name:'Senior ATC: Area Control Procedural Rating',sangkad:'ศจ.',level:8,count:12,theory_start:'2026-03-01',theory_end:'2026-04-29',ojt_start:'2026-04-30',ojt_end:null,rating:'2027-03-31',progress:15},
-  {code:'ADV/ADI-VTSG',name:'Aerodrome Control: Unit Endorsement (Krabi)',sangkad:'ศภ.บภ 1.',level:5,count:9,theory_start:'2024-03-24',theory_end:'2024-09-15',ojt_start:'2025-11-09',ojt_end:'2026-03-28',rating:'2026-09-13',progress:80},
-  {code:'ADV/ADI-VTSP',name:'Aerodrome Control: Unit Endorsement (Phuket)',sangkad:'ศภ.บภ 1.',level:5,count:16,theory_start:'2026-05-17',theory_end:null,ojt_start:null,ojt_end:null,rating:null,progress:5},
-  {code:'APP-CR',name:'Approach Control Procedural (Chiang Rai Sector)',sangkad:'ศบ.',level:7,count:8,theory_start:'2022-05-08',theory_end:'2027-02-25',ojt_start:'2023-02-28',ojt_end:'2028-02-29',rating:'2026-04-09',progress:65},
-  {code:'ADV/ADI-VTCT',name:'Aerodrome Control: Unit Endorsement (Chiang Rai)',sangkad:'ศช.บภ 2.',level:5,count:6,theory_start:'2023-02-11',theory_end:'2024-02-13',ojt_start:'2025-10-03',ojt_end:'2026-01-08',rating:'2026-05-31',progress:98},
-  {code:'ADC-VTSM',name:'Aerodrome Control Rating (Samui Airport)',sangkad:'ศร.บภ 1.',level:5,count:4,theory_start:'2026-07-05',theory_end:'2026-09-17',ojt_start:'2026-09-27',ojt_end:'2026-12-31',rating:'2027-05-31',progress:10},
-  {code:'ADC-Nan/SKT',name:'Aerodrome Control — Nan & Sukhothai',sangkad:'ศล.บภ 2.',level:5,count:6,theory_start:'2025-01-15',theory_end:'2025-06-30',ojt_start:'2025-07-01',ojt_end:'2026-06-30',rating:'2026-08-31',progress:85},
-  {code:'ADC-UBL',name:'Aerodrome Control — Ubon Ratchathani',sangkad:'ศบ.บภ 2.',level:5,count:2,theory_start:'2025-06-01',theory_end:'2025-11-30',ojt_start:'2025-12-01',ojt_end:null,rating:null,progress:20},
-  {code:'ADC-BRM',name:'Aerodrome Control — Buri Ram & Korat',sangkad:'ศม.บภ 2.',level:5,count:5,theory_start:'2025-09-01',theory_end:'2026-02-28',ojt_start:'2026-03-01',ojt_end:'2026-10-31',rating:'2026-12-31',progress:55},
+  {code:"ADC-VTSM",name:"Aerodrome Control Rating (Samui Airport)",sangkad:"ศร.บภ 1.",level:5,count:4,theory_start:"2026-07-01",theory_end:"2026-09-01",ojt_start:"2026-09-01",ojt_end:"2026-12-01",rating:"2027-05-01",progress:5},
+  {code:"Senior ACP",name:"Senior Air Traffic Controller (Area Control Procedural Rating)",sangkad:"ศจ.",level:7,count:12,theory_start:"2026-03-01",theory_end:"2026-04-01",ojt_start:"2026-04-01",ojt_end:null,rating:"2027-03-01",progress:15},
+  {code:"ACS (Surv.)",name:"Area Control (Surveillance): BACC Unit Endorsement Course",sangkad:"ศจ.",level:7,count:24,theory_start:"2024-10-01",theory_end:"2024-11-01",ojt_start:"2025-02-01",ojt_end:"2025-09-01",rating:"2026-08-01",progress:90},
+  {code:"ACS (Surv. R)",name:"Area Control Surveillance Rating",sangkad:"ศจ.",level:7,count:24,theory_start:"2025-03-01",theory_end:"2025-04-01",ojt_start:"2025-05-01",ojt_end:"2026-02-01",rating:"2026-07-01",progress:95},
+  {code:"ACP",name:"Area Control (Procedural): BACC Unit Endorsement Course",sangkad:"ศจ.",level:7,count:26,theory_start:"2025-10-01",theory_end:"2026-01-01",ojt_start:"2026-01-01",ojt_end:"2026-12-01",rating:"2028-01-01",progress:35},
+  {code:"ADV/ADI-VTCT",name:"Aerodrome Control (ADV/ADI): Unit Endorsement Course (Mae Fah Luang - Chiang Rai International Airport)",sangkad:"ศช.บภ 2.",level:5,count:6,theory_start:"2024-02-01",theory_end:"2024-10-01",ojt_start:"2025-10-01",ojt_end:"2026-01-01",rating:"2026-05-01",progress:98},
+  {code:"ADC-VTPO",name:"Aerodrome Control Rating (Sukhothai Airport)",sangkad:"ศล.บภ 2.",level:5,count:4,theory_start:"2024-03-01",theory_end:"2024-09-01",ojt_start:"2025-11-01",ojt_end:"2026-04-01",rating:"2026-06-01",progress:95},
+  {code:"ADC-VTCN",name:"Aerodrome Control Rating (Nan Nakhon Airport)",sangkad:"ศล.บภ 2.",level:5,count:6,theory_start:"2023-02-01",theory_end:"2024-02-01",ojt_start:"2025-10-01",ojt_end:"2026-01-01",rating:"2026-07-01",progress:98},
+  {code:"ADV/ADI-VTSG",name:"Aerodrome Control (ADV/ADI): Unit Endorsement Course (Krabi Airport)",sangkad:"ศภ.บภ 1.",level:5,count:9,theory_start:"2024-03-01",theory_end:"2024-09-01",ojt_start:"2025-11-01",ojt_end:"2026-03-01",rating:"2026-09-01",progress:80},
+  {code:"ADV/ADI-VTSP",name:"Aerodrome Control (ADV/ADI): Unit Endorsement Course (Phuket Airport)",sangkad:"ศภ.บภ 1.",level:5,count:16,theory_start:"2026-05-01",theory_end:null,ojt_start:null,ojt_end:null,rating:null,progress:5},
+  {code:"ADC-VTUV",name:"Aerodrome Control (ADV/ADI): Unit Endorsement Course (Roi Et Airport)",sangkad:"ศบ.บภ 2.",level:5,count:2,theory_start:"2025-11-01",theory_end:"2026-04-01",ojt_start:null,ojt_end:null,rating:"2026-04-01",progress:20},
+  {code:"ADC-VTUO",name:"Aerodrome Control (ADV/ADI): Unit Endorsement Course (Buri Ram Airport)",sangkad:"ศม.บภ 2.",level:7,count:2,theory_start:"2025-09-01",theory_end:"2025-10-01",ojt_start:"2026-02-01",ojt_end:"2026-03-01",rating:"2026-07-01",progress:90},
+  {code:"ADC-VTUQ",name:"Aerodrome Control (ADV/ADI): Unit Endorsement Course (Nakhon Ratchasima Airport)",sangkad:"ศม.บภ 2.",level:5,count:3,theory_start:"2025-08-01",theory_end:"2025-12-01",ojt_start:"2026-01-01",ojt_end:"2026-05-01",rating:"2026-07-01",progress:90},
+  {code:"APP-CR-2026",name:"Approach Control Procedural Rating (Chiang Rai Sector) — Batch 2026",sangkad:"ศบ.",level:7,count:4,theory_start:"2022-05-01",theory_end:"2027-02-01",ojt_start:"2023-02-01",ojt_end:"2028-02-01",rating:"2026-07-01",progress:65},
+  {code:"APP-CR-2028",name:"Approach Control Procedural Rating (Chiang Rai Sector) — Batch 2028",sangkad:"ศบ.",level:5,count:4,theory_start:"2025-10-01",theory_end:"2026-01-01",ojt_start:"2026-01-01",ojt_end:"2026-12-01",rating:"2028-07-01",progress:35},
+  {code:"APP-KKN-2026",name:"Approach Control Procedural Rating (Khon Kaen Sector) — Batch 2026",sangkad:"ศบ.",level:7,count:1,theory_start:"2025-05-01",theory_end:"2027-02-01",ojt_start:"2027-02-01",ojt_end:"2028-04-01",rating:"2026-07-01",progress:30},
+  {code:"APP-KKN-2029",name:"Approach Control Procedural Rating (Khon Kaen Sector) — Batch 2029",sangkad:"ศบ.",level:5,count:4,theory_start:"2027-11-01",theory_end:"2028-04-01",ojt_start:"2028-01-01",ojt_end:"2029-01-01",rating:"2029-05-01",progress:5},
+  {code:"APP-UBL",name:"Approach Control Procedural Rating (Ubon Sector)",sangkad:"ศบ.",level:5,count:4,theory_start:"2026-12-01",theory_end:"2027-02-01",ojt_start:"2028-04-01",ojt_end:"2028-04-01",rating:"2028-09-01",progress:5},
+  {code:"APS-UBL",name:"Approach Control Surveillance Rating (Ubon Sector)",sangkad:"ศบ.",level:5,count:4,theory_start:"2026-12-01",theory_end:"2027-02-01",ojt_start:"2028-04-01",ojt_end:"2028-04-01",rating:"2028-09-01",progress:5},
+  {code:"APP-VTSM",name:"Approach Control Procedural Rating (Samui Sector)",sangkad:"ศบ.",level:5,count:4,theory_start:"2028-02-01",theory_end:"2028-12-01",ojt_start:"2029-01-01",ojt_end:"2029-04-01",rating:"2029-09-01",progress:5},
+  {code:"APS-VTSM",name:"Approach Control Surveillance Rating (Samui Sector)",sangkad:"ศบ.",level:5,count:4,theory_start:"2028-02-01",theory_end:"2028-12-01",ojt_start:"2029-01-01",ojt_end:"2029-04-01",rating:"2029-09-01",progress:5}
 ];
 
 const GANTT_START=new Date('2024-01-01'), GANTT_END=new Date('2030-01-01');
 const TOTAL_DAYS=(GANTT_END-GANTT_START)/86400000;
 function dayOffset(d){return d?Math.max(0,(new Date(d)-GANTT_START)/86400000/TOTAL_DAYS*100):null;}
 function dayWidth(s,e){return(s&&e)?Math.max(0.5,(new Date(e)-new Date(s))/86400000/TOTAL_DAYS*100):0;}
-function progressColor(p){return p>=80?'#10b981':p>=40?'#3b82f6':'#f59e0b';}
+const COURSE_STUDENTS = {
+  "ADC-VTSM": [
+    {
+      "name": "น.ส.ณัฏฐณิชา เจียมวุฒิศักดิ์",
+      "lv": "Lv.5",
+      "rating": 2027,
+      "course": "ADC-VTSM",
+      "status": "-"
+    },
+    {
+      "name": "นายเชาวลิต แท่นหิรัญ",
+      "lv": "Lv.5",
+      "rating": 2027,
+      "course": "ADC-VTSM",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.ณัฐพัชร์ สวัสดิ์วงษ์",
+      "lv": "Lv.5",
+      "rating": 2027,
+      "course": "ADC-VTSM",
+      "status": "-"
+    },
+    {
+      "name": "นายกมลทรรศน์ รุ่งศักดิ์เจริญชัย",
+      "lv": "Lv.5",
+      "rating": 2027,
+      "course": "ADC-VTSM",
+      "status": "-"
+    }
+  ],
+  "Senior ACP": [
+    {
+      "name": "น.ส.อิมภัทรา หมอดี",
+      "lv": "Lv.7",
+      "rating": 2027,
+      "course": "Senior ACP",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.สิรีธร สุนทรวัฒน์",
+      "lv": "Lv.7",
+      "rating": 2027,
+      "course": "Senior ACP",
+      "status": "-"
+    },
+    {
+      "name": "นายพงศ์วรธัช โตธนะรุ่งโรจน์",
+      "lv": "Lv.7",
+      "rating": 2027,
+      "course": "Senior ACP",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.รดาวัลย์ แสงกิตติกร",
+      "lv": "Lv.7",
+      "rating": 2027,
+      "course": "Senior ACP",
+      "status": "-"
+    },
+    {
+      "name": "นายธนดล แสงกิตติกร",
+      "lv": "Lv.7",
+      "rating": 2027,
+      "course": "Senior ACP",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.สรัญญา อุดมศิลป์",
+      "lv": "Lv.7",
+      "rating": 2027,
+      "course": "Senior ACP",
+      "status": "-"
+    },
+    {
+      "name": "นายชัชประวิทย์ โพธยานุวัตร",
+      "lv": "Lv.7",
+      "rating": 2027,
+      "course": "Senior ACP",
+      "status": "-"
+    },
+    {
+      "name": "นางอริศรา ธนานันท์",
+      "lv": "Lv.7",
+      "rating": 2027,
+      "course": "Senior ACP",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.มาณิตา สุวรรณกูฏ",
+      "lv": "Lv.7",
+      "rating": 2027,
+      "course": "Senior ACP",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.ญาดา นีระเสน",
+      "lv": "Lv.7",
+      "rating": 2027,
+      "course": "Senior ACP",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.กาญจนา กาญจนเพ็ญ",
+      "lv": "Lv.7",
+      "rating": 2027,
+      "course": "Senior ACP",
+      "status": "-"
+    },
+    {
+      "name": "นายวิทวัส ฟูตระกูล",
+      "lv": "Lv.7",
+      "rating": 2027,
+      "course": "Senior ACP",
+      "status": "สถานะรอปรับตำแหน่ง"
+    }
+  ],
+  "ACS (Surv.)": [
+    {
+      "name": "นายอลังการ ตั้งใจเปี่ยม",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv.)",
+      "status": "-"
+    },
+    {
+      "name": "นายวริทธร มณฑลผลิน",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv.)",
+      "status": "-"
+    },
+    {
+      "name": "นายฐานวุฒิ โกษากุล",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv.)",
+      "status": "-"
+    },
+    {
+      "name": "นายบวรนาถ สุวิวัฒน์",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv.)",
+      "status": "-"
+    },
+    {
+      "name": "นายสุรเชษฏ์ พิมาพันธุ์ศรี",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv.)",
+      "status": "-"
+    },
+    {
+      "name": "นายภูฆินทร์ พุทธกูล",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv.)",
+      "status": "-"
+    },
+    {
+      "name": "นายอินทร์นวัต สังข์มนัส",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv.)",
+      "status": "-"
+    },
+    {
+      "name": "นายบวร ทายาทสุวรรณ",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv.)",
+      "status": "-"
+    },
+    {
+      "name": "นายนนทวุฒิ ชีวศรีรุ่งเรือง",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv.)",
+      "status": "-"
+    },
+    {
+      "name": "นายเมธัส เรียงวงศ์",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv.)",
+      "status": "-"
+    },
+    {
+      "name": "นายพชร พหูวณิช",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv.)",
+      "status": "-"
+    },
+    {
+      "name": "นายฤทธิ์ณรงค์ กล่อมจิตร์",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv.)",
+      "status": "-"
+    },
+    {
+      "name": "นายภูมิ ยุติธรรม",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv.)",
+      "status": "-"
+    },
+    {
+      "name": "นายศุภณัฐ นิธยานนท์",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv.)",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.ศศิชนก เฟื่องไพบูลย์",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv.)",
+      "status": "-"
+    },
+    {
+      "name": "นายจิตต์พัฒท์ รวีอร่ามวงศ์",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv.)",
+      "status": "-"
+    },
+    {
+      "name": "นายอภิราม ธีรนวกรรม",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv.)",
+      "status": "-"
+    },
+    {
+      "name": "นายกรกฎ จันทโรภาส",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv.)",
+      "status": "-"
+    },
+    {
+      "name": "นายกิตติคุณ มหาศร",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv.)",
+      "status": "-"
+    },
+    {
+      "name": "นายอภิสิทธิ์ ภิรมย์เลิศ",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv.)",
+      "status": "-"
+    },
+    {
+      "name": "นายประศิลป์ กันทะวงศ์",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv.)",
+      "status": "-"
+    },
+    {
+      "name": "นายธนัตถ์ สุประสงค์สิน",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv.)",
+      "status": "-"
+    },
+    {
+      "name": "นายจตุรพร ประหยัด",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv.)",
+      "status": "-"
+    },
+    {
+      "name": "นายสลิล คุณาพรสุจริต",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv.)",
+      "status": "-"
+    }
+  ],
+  "ACS (Surv. R)": [
+    {
+      "name": "นายกฤตยชญ์ รักทอง",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv. R)",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.ปาจรีย์ อิทธิรัตนโชติ",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv. R)",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.เพชรสุดา มหาดไทย",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv. R)",
+      "status": "-"
+    },
+    {
+      "name": "นายอภินัทธ์ รุ่งรัตน์ธวัชชัย",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv. R)",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.พลอยกัญญา จรัสวิริยะกุล",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv. R)",
+      "status": "-"
+    },
+    {
+      "name": "นายพัฐวัชร์ ถือทอง",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv. R)",
+      "status": "-"
+    },
+    {
+      "name": "ว่าที่ ร.ต.อติคุณ ตั้งเจริญเวช",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv. R)",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.ญาตาวี ปทะวานิช",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv. R)",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.ฉัตรฐิยา นาราธรรมนนท์",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv. R)",
+      "status": "-"
+    },
+    {
+      "name": "นายณัฐดนัย ศักดิ์คงคา",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv. R)",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.ณัฏฐณิชา สุขเกษม",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv. R)",
+      "status": "-"
+    },
+    {
+      "name": "นายยอดเถา ทรัพย์พ่วง",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv. R)",
+      "status": "-"
+    },
+    {
+      "name": "นายพะริษฐ์ เวลส์ช",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv. R)",
+      "status": "-"
+    },
+    {
+      "name": "นางปริม ภิรมย์เลิศ",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv. R)",
+      "status": "-"
+    },
+    {
+      "name": "นางเกวลี เจริญอนุสรณ์",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv. R)",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.สรัลพร พันธ์นรา",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv. R)",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.พธูกมล พานิชนก",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv. R)",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.ชุมาพร จิตรชู",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv. R)",
+      "status": "-"
+    },
+    {
+      "name": "นายคณิน ช่วยเยียวยา",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv. R)",
+      "status": "-"
+    },
+    {
+      "name": "นายอชิต ภูมิชาญานันท์",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv. R)",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.ยลรวิ คุปตะสิน",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv. R)",
+      "status": "-"
+    },
+    {
+      "name": "นายกิตติภัฏ จุฑาวรพงศ์",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv. R)",
+      "status": "-"
+    },
+    {
+      "name": "นายตวิษ โรจน์ไพศาลสกุล",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv. R)",
+      "status": "-"
+    },
+    {
+      "name": "นายเชนทวิช สิงห์แก้ว",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ACS (Surv. R)",
+      "status": "-"
+    }
+  ],
+  "ACP": [
+    {
+      "name": "น.ส.มัชฌิมา ลี้ตระกูล",
+      "lv": "Lv.7",
+      "rating": 2028,
+      "course": "ACP",
+      "status": "-"
+    },
+    {
+      "name": "นายก้องเกียรติ จารุสกุล",
+      "lv": "Lv.7",
+      "rating": 2028,
+      "course": "ACP",
+      "status": "-"
+    },
+    {
+      "name": "นายอาทิตย์ เลาหทวีโชค",
+      "lv": "Lv.7",
+      "rating": 2028,
+      "course": "ACP",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.ธิติมณี กล่อมเกลา",
+      "lv": "Lv.7",
+      "rating": 2028,
+      "course": "ACP",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.พัทธ์ธีรา ลาภธนานนท์",
+      "lv": "Lv.7",
+      "rating": 2028,
+      "course": "ACP",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.ศรัณยา ไกรสิทธิศิริกุล",
+      "lv": "Lv.7",
+      "rating": 2028,
+      "course": "ACP",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.ฌัลลรี เฌอรีรักษ์",
+      "lv": "Lv.7",
+      "rating": 2028,
+      "course": "ACP",
+      "status": "-"
+    },
+    {
+      "name": "นายพงศ์ปณต โชติช่วง",
+      "lv": "Lv.7",
+      "rating": 2028,
+      "course": "ACP",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.ณัฐนิชา จงปัญญากุล",
+      "lv": "Lv.7",
+      "rating": 2028,
+      "course": "ACP",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.อภิษฎา นุชผ่องใส",
+      "lv": "Lv.7",
+      "rating": 2028,
+      "course": "ACP",
+      "status": "-"
+    },
+    {
+      "name": "นายกานตพงศ์ พงศ์ศรีภิญโญ",
+      "lv": "Lv.7",
+      "rating": 2028,
+      "course": "ACP",
+      "status": "-"
+    },
+    {
+      "name": "นายกร รุ่งโรจน์วณิชย์",
+      "lv": "Lv.7",
+      "rating": 2028,
+      "course": "ACP",
+      "status": "-"
+    },
+    {
+      "name": "นายพีรพล อนันตวราศิลป์",
+      "lv": "Lv.7",
+      "rating": 2028,
+      "course": "ACP",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.ฐิติภรณ์ ปรีชาเมธ",
+      "lv": "Lv.7",
+      "rating": 2028,
+      "course": "ACP",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.ปาจรีย์ จิระยิ่งเจริญ",
+      "lv": "Lv.7",
+      "rating": 2028,
+      "course": "ACP",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.ธัญญ์นลิน วินิจฉัยกุล",
+      "lv": "Lv.7",
+      "rating": 2028,
+      "course": "ACP",
+      "status": "-"
+    },
+    {
+      "name": "นายภูดิศ ชีวะปรีชา",
+      "lv": "Lv.7",
+      "rating": 2028,
+      "course": "ACP",
+      "status": "-"
+    },
+    {
+      "name": "นายธนัท ศรีธนภัครางกูร",
+      "lv": "Lv.7",
+      "rating": 2028,
+      "course": "ACP",
+      "status": "-"
+    },
+    {
+      "name": "นายนภัส พันธุ์แสงอร่าม",
+      "lv": "Lv.7",
+      "rating": 2028,
+      "course": "ACP",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.ธมลวรรณ ลาภานันต์",
+      "lv": "Lv.7",
+      "rating": 2028,
+      "course": "ACP",
+      "status": "-"
+    },
+    {
+      "name": "นายชีวินทรีย์ วีระวานิช",
+      "lv": "Lv.7",
+      "rating": 2028,
+      "course": "ACP",
+      "status": "-"
+    },
+    {
+      "name": "นายนนทวัฒน์ พูนสุขวัฒนา",
+      "lv": "Lv.7",
+      "rating": 2028,
+      "course": "ACP",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.คุณัญญา ศรีวงษ์",
+      "lv": "Lv.7",
+      "rating": 2028,
+      "course": "ACP",
+      "status": "-"
+    },
+    {
+      "name": "นายกังวาล พูลทรัพย์",
+      "lv": "Lv.7",
+      "rating": 2028,
+      "course": "ACP",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.นันท์ณภัสร การงาน",
+      "lv": "Lv.7",
+      "rating": 2028,
+      "course": "ACP",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.ศศิกุลวี ไพจิตร",
+      "lv": "Lv.7",
+      "rating": 2028,
+      "course": "ACP",
+      "status": "-"
+    }
+  ],
+  "ADV/ADI-VTCT": [
+    {
+      "name": "น.ส.สุดารัตน์ วงศ์หยกสุริยา",
+      "lv": "Lv.5",
+      "rating": 2026,
+      "course": "ADV/ADI-VTCT",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.กมลวรรณ วชิรอนันต์",
+      "lv": "Lv.5",
+      "rating": 2026,
+      "course": "ADV/ADI-VTCT",
+      "status": "-"
+    },
+    {
+      "name": "นายเฉลิมเกียรติ ฉัตรมงคลชาติ",
+      "lv": "Lv.5",
+      "rating": 2026,
+      "course": "ADV/ADI-VTCT",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.ธัญจิรา ทิพย์รัตน์",
+      "lv": "Lv.5",
+      "rating": 2026,
+      "course": "ADV/ADI-VTCT",
+      "status": "-"
+    },
+    {
+      "name": "นายคมชาญ สุขประทัง",
+      "lv": "Lv.5",
+      "rating": 2026,
+      "course": "ADV/ADI-VTCT",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.นิชาภา จันทร์เพ็ง",
+      "lv": "Lv.5",
+      "rating": 2026,
+      "course": "ADV/ADI-VTCT",
+      "status": "-"
+    }
+  ],
+  "ADC-VTPO": [
+    {
+      "name": "น.ส.พิมพ์วรีย์ ศิริมาก",
+      "lv": "Lv.5",
+      "rating": 2026,
+      "course": "ADC-VTPO",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.กันยารัตน์ ฉิมแก้ว",
+      "lv": "Lv.5",
+      "rating": 2026,
+      "course": "ADC-VTPO",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.วรินยุพา นภาศิริปกรณ์",
+      "lv": "Lv.5",
+      "rating": 2026,
+      "course": "ADC-VTPO",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.ธันวารัตน์ ลิ้มเฮงสิน",
+      "lv": "Lv.5",
+      "rating": 2026,
+      "course": "ADC-VTPO",
+      "status": "-"
+    }
+  ],
+  "ADC-VTCN": [
+    {
+      "name": "น.ส.อรทัย สมิตานนท์",
+      "lv": "Lv.5",
+      "rating": 2026,
+      "course": "ADC-VTCN",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.ชนิกานต์ วรรณา",
+      "lv": "Lv.5",
+      "rating": 2026,
+      "course": "ADC-VTCN",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.จุฬาลักษณ์ สมวันดี",
+      "lv": "Lv.5",
+      "rating": 2026,
+      "course": "ADC-VTCN",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.นันท์ชนก ดุสิตากร",
+      "lv": "Lv.5",
+      "rating": 2026,
+      "course": "ADC-VTCN",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.วัลลภา นิลพันธ์",
+      "lv": "Lv.5",
+      "rating": 2026,
+      "course": "ADC-VTCN",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.ณัฐกานต์ กุสุโมทย์",
+      "lv": "Lv.5",
+      "rating": 2026,
+      "course": "ADC-VTCN",
+      "status": "-"
+    }
+  ],
+  "ADV/ADI-VTSG": [
+    {
+      "name": "น.ส.ศกลวรรณ ยอดแก้ว",
+      "lv": "Lv.5",
+      "rating": 2026,
+      "course": "ADV/ADI-VTSG",
+      "status": "รอการทดสอบ มป."
+    },
+    {
+      "name": "น.ส.บุญธิดา พุ่มอยู่",
+      "lv": "Lv.5",
+      "rating": 2026,
+      "course": "ADV/ADI-VTSG",
+      "status": "รอการทดสอบ มป."
+    },
+    {
+      "name": "นายอนุโภช จินนุกูล",
+      "lv": "Lv.5",
+      "rating": 2026,
+      "course": "ADV/ADI-VTSG",
+      "status": "รอการทดสอบ มป."
+    },
+    {
+      "name": "น.ส.สุนันทา ณ ปัตตานี",
+      "lv": "Lv.5",
+      "rating": 2026,
+      "course": "ADV/ADI-VTSG",
+      "status": "รอการทดสอบ มป."
+    },
+    {
+      "name": "นายกันตชาติ วุฒิเมธาสิน",
+      "lv": "Lv.5",
+      "rating": 2026,
+      "course": "ADV/ADI-VTSG",
+      "status": "รอการทดสอบ มป."
+    },
+    {
+      "name": "นายอัษฎาวุธ พวงจันทร์",
+      "lv": "Lv.5",
+      "rating": 2026,
+      "course": "ADV/ADI-VTSG",
+      "status": "รอการทดสอบ มป."
+    },
+    {
+      "name": "น.ส.จีรนิตย์ ยอดเวียน",
+      "lv": "Lv.5",
+      "rating": 2026,
+      "course": "ADV/ADI-VTSG",
+      "status": "พักรักษาตัว"
+    },
+    {
+      "name": "น.ส.อภิชญา แวดเวียง",
+      "lv": "Lv.5",
+      "rating": 2026,
+      "course": "ADV/ADI-VTSG",
+      "status": "รอการทดสอบ มป."
+    },
+    {
+      "name": "นายคณิต มาสม",
+      "lv": "Lv.5",
+      "rating": 2026,
+      "course": "ADV/ADI-VTSG",
+      "status": "ลาออก"
+    }
+  ],
+  "ADV/ADI-VTSP": [
+    {
+      "name": "น.ส.พัชรพร มาศมหาศาล",
+      "lv": "Lv.5",
+      "rating": null,
+      "course": "ADV/ADI-VTSP",
+      "status": "รอหลักสูตร กพท."
+    },
+    {
+      "name": "น.ส.วริสรา พึ่งบุญ",
+      "lv": "Lv.5",
+      "rating": null,
+      "course": "ADV/ADI-VTSP",
+      "status": "รอหลักสูตร กพท."
+    },
+    {
+      "name": "น.ส.ฐิติวรดา ไชยลี",
+      "lv": "Lv.5",
+      "rating": null,
+      "course": "ADV/ADI-VTSP",
+      "status": "รอหลักสูตร กพท."
+    },
+    {
+      "name": "น.ส.พนิตตา ร่มฉัตรทอง",
+      "lv": "Lv.5",
+      "rating": null,
+      "course": "ADV/ADI-VTSP",
+      "status": "รอหลักสูตร กพท."
+    },
+    {
+      "name": "น.ส.ชนนิกานต์ แสงใสแก้ว",
+      "lv": "Lv.5",
+      "rating": null,
+      "course": "ADV/ADI-VTSP",
+      "status": "รอหลักสูตร กพท."
+    },
+    {
+      "name": "น.ส.พิมพ์สิริ รักษาแก้ว",
+      "lv": "Lv.5",
+      "rating": null,
+      "course": "ADV/ADI-VTSP",
+      "status": "รอหลักสูตร กพท."
+    },
+    {
+      "name": "น.ส.บุสริน สุขประเสริฐ",
+      "lv": "Lv.5",
+      "rating": null,
+      "course": "ADV/ADI-VTSP",
+      "status": "รอหลักสูตร กพท."
+    },
+    {
+      "name": "น.ส.สุดาพร เชื้อบุญมี",
+      "lv": "Lv.5",
+      "rating": null,
+      "course": "ADV/ADI-VTSP",
+      "status": "รอหลักสูตร กพท."
+    },
+    {
+      "name": "น.ส.สุวิชฎา ส่องสุข",
+      "lv": "Lv.5",
+      "rating": null,
+      "course": "ADV/ADI-VTSP",
+      "status": "รอหลักสูตร กพท."
+    },
+    {
+      "name": "น.ส.ศิริญญา จุฬาคำ",
+      "lv": "Lv.5",
+      "rating": null,
+      "course": "ADV/ADI-VTSP",
+      "status": "รอหลักสูตร กพท."
+    },
+    {
+      "name": "นายธนภัทร จันทรอารี",
+      "lv": "Lv.5",
+      "rating": null,
+      "course": "ADV/ADI-VTSP",
+      "status": "รอหลักสูตร กพท."
+    },
+    {
+      "name": "น.ส.ณัฐชยา กลั่นมาลี",
+      "lv": "Lv.5",
+      "rating": null,
+      "course": "ADV/ADI-VTSP",
+      "status": "รอหลักสูตร กพท."
+    },
+    {
+      "name": "น.ส.รินรดา สกุลนอก",
+      "lv": "Lv.5",
+      "rating": null,
+      "course": "ADV/ADI-VTSP",
+      "status": "รอหลักสูตร กพท."
+    },
+    {
+      "name": "น.ส.ปวิชญา อ่อนศรี",
+      "lv": "Lv.5",
+      "rating": null,
+      "course": "ADV/ADI-VTSP",
+      "status": "รอหลักสูตร กพท."
+    },
+    {
+      "name": "น.ส.จิวสา ศรีคำ",
+      "lv": "Lv.5",
+      "rating": null,
+      "course": "ADV/ADI-VTSP",
+      "status": "รอหลักสูตร กพท."
+    },
+    {
+      "name": "นายพีรพัฒน์ สุภวาลย์",
+      "lv": "Lv.5",
+      "rating": null,
+      "course": "ADV/ADI-VTSP",
+      "status": "รอหลักสูตร กพท."
+    }
+  ],
+  "ADC-VTUV": [
+    {
+      "name": "นายวัชรพงศ์ หาคำ",
+      "lv": "Lv.5",
+      "rating": 2026,
+      "course": "ADC-VTUV",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.วชิตรลดา แก่นลา",
+      "lv": "Lv.5",
+      "rating": 2026,
+      "course": "ADC-VTUV",
+      "status": "-"
+    }
+  ],
+  "ADC-VTUO": [
+    {
+      "name": "นายณัฐวีร ระวังสำโรง",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "ADC-VTUO",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.กิตติยา ประยงค์หอม",
+      "lv": "Lv.5",
+      "rating": 2026,
+      "course": "ADC-VTUO",
+      "status": "-"
+    }
+  ],
+  "ADC-VTUQ": [
+    {
+      "name": "นายธนวัฒน์ เผ่าดี",
+      "lv": "Lv.5",
+      "rating": 2026,
+      "course": "ADC-VTUQ",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.ณิชกานต์ สุภารัตน์",
+      "lv": "Lv.5",
+      "rating": 2026,
+      "course": "ADC-VTUQ",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.กุลรัศมิ์ เชาว์รักษ์หิรัญ",
+      "lv": "Lv.5",
+      "rating": 2026,
+      "course": "ADC-VTUQ",
+      "status": "-"
+    }
+  ],
+  "APP-CR-2026": [
+    {
+      "name": "น.ส.อัญชฎา อุดมจรรยา",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "APP-CR",
+      "status": "-"
+    },
+    {
+      "name": "นายปิติภูมิ จริยะยรรยง",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "APP-CR",
+      "status": "Terminated"
+    },
+    {
+      "name": "นายปิยวัฒน์ กลั่นเรืองแสง",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "APP-CR",
+      "status": "-"
+    },
+    {
+      "name": "นายธงชัย ณ พัทลุง",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "APP-CR",
+      "status": "-"
+    }
+  ],
+  "APP-CR-2028": [
+    {
+      "name": "น.ส.นัชชา ชาญชัยศรี",
+      "lv": "Lv.5",
+      "rating": 2028,
+      "course": "APP-CR",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.ฐิติพัชร มีสวัสดิ์",
+      "lv": "Lv.5",
+      "rating": 2028,
+      "course": "APP-CR",
+      "status": "-"
+    },
+    {
+      "name": "นายกัณณ์ หาญชาญชัย",
+      "lv": "Lv.5",
+      "rating": 2028,
+      "course": "APP-CR",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.ปิ่นปินัทธ์ ทิมาภรณ์",
+      "lv": "Lv.5",
+      "rating": 2028,
+      "course": "APP-CR",
+      "status": "-"
+    }
+  ],
+  "APP-KKN-2026": [
+    {
+      "name": "นายปฏิกานต์ นิลเลื่อม",
+      "lv": "Lv.7",
+      "rating": 2026,
+      "course": "APP-KKN",
+      "status": "-"
+    }
+  ],
+  "APP-KKN-2029": [
+    {
+      "name": "นายจิตกานต์ แก้วไชยะ",
+      "lv": "Lv.5",
+      "rating": 2029,
+      "course": "APP-KKN",
+      "status": "-"
+    },
+    {
+      "name": "นายธรรมยศ จำปาทิพย์พงศ์",
+      "lv": "Lv.5",
+      "rating": 2029,
+      "course": "APP-KKN",
+      "status": "-"
+    },
+    {
+      "name": "นายวีรวิชญ์ มิลินพัฒนกรณ์",
+      "lv": "Lv.5",
+      "rating": 2029,
+      "course": "APP-KKN",
+      "status": "-"
+    },
+    {
+      "name": "นายณัฐพงค์ ผูกจิต",
+      "lv": "Lv.5",
+      "rating": 2029,
+      "course": "APP-KKN",
+      "status": "-"
+    }
+  ],
+  "APP-UBL": [
+    {
+      "name": "นายชัชนันท์ วงศ์แก้ว",
+      "lv": "Lv.5",
+      "rating": 2028,
+      "course": "APP-UBL",
+      "status": "-"
+    },
+    {
+      "name": "นายปิยภูมิ ตะเภาพงษ์",
+      "lv": "Lv.5",
+      "rating": 2028,
+      "course": "APP-UBL",
+      "status": "-"
+    },
+    {
+      "name": "นายสิรภพ แก้วไสย",
+      "lv": "Lv.5",
+      "rating": 2028,
+      "course": "APP-UBL",
+      "status": "-"
+    },
+    {
+      "name": "นายณวรรธน์ คำด้วง",
+      "lv": "Lv.5",
+      "rating": 2028,
+      "course": "APP-UBL",
+      "status": "-"
+    }
+  ],
+  "APS-UBL": [
+    {
+      "name": "นายชัชนันท์ วงศ์แก้ว",
+      "lv": "Lv.5",
+      "rating": 2028,
+      "course": "APS-UBL",
+      "status": "-"
+    },
+    {
+      "name": "นายปิยภูมิ ตะเภาพงษ์",
+      "lv": "Lv.5",
+      "rating": 2028,
+      "course": "APS-UBL",
+      "status": "-"
+    },
+    {
+      "name": "นายสิรภพ แก้วไสย",
+      "lv": "Lv.5",
+      "rating": 2028,
+      "course": "APS-UBL",
+      "status": "-"
+    },
+    {
+      "name": "นายณวรรธน์ คำด้วง",
+      "lv": "Lv.5",
+      "rating": 2028,
+      "course": "APS-UBL",
+      "status": "-"
+    }
+  ],
+  "APP-VTSM": [
+    {
+      "name": "นายวรวิช ศรีคำภา",
+      "lv": "Lv.5",
+      "rating": 2029,
+      "course": "APP-VTSM",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.จิรญา ชัยประภา",
+      "lv": "Lv.5",
+      "rating": 2029,
+      "course": "APP-VTSM",
+      "status": "-"
+    },
+    {
+      "name": "นายณัฐพงค์ ผูกจิต",
+      "lv": "Lv.5",
+      "rating": 2029,
+      "course": "APP-VTSM",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.ทันธิยา ไตรสุทันธ์",
+      "lv": "Lv.5",
+      "rating": 2029,
+      "course": "APP-VTSM",
+      "status": "-"
+    }
+  ],
+  "APS-VTSM": [
+    {
+      "name": "นายวรวิช ศรีคำภา",
+      "lv": "Lv.5",
+      "rating": 2029,
+      "course": "APS-VTSM",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.จิรญา ชัยประภา",
+      "lv": "Lv.5",
+      "rating": 2029,
+      "course": "APS-VTSM",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.บุณยาพร ไวทยะพัธน์",
+      "lv": "Lv.5",
+      "rating": 2029,
+      "course": "APS-VTSM",
+      "status": "-"
+    },
+    {
+      "name": "น.ส.ทันธิยา ไตรสุทันธ์",
+      "lv": "Lv.5",
+      "rating": 2029,
+      "course": "APS-VTSM",
+      "status": "-"
+    }
+  ]
+};;
 
-let selectedCourse=-1;
+// ── Course page state ──
+let selectedCourse = -1;   // stores COURSES[] original index
+let courseFilterSangkad = 'all';
+
+// Sort courses once: earliest rating first, null last
+const SORTED_COURSES = [...COURSES].sort((a,b)=>{
+  if(!a.rating && !b.rating) return 0;
+  if(!a.rating) return 1;
+  if(!b.rating) return -1;
+  return new Date(a.rating) - new Date(b.rating);
+});
+
+// Unique sangkad list for filter
+const SANGKAD_LIST = [...new Set(COURSES.map(c=>c.sangkad))].sort();
+
+// ── Build a single course card HTML ──
+function buildCourseCard(c, origIdx, isSelected) {
+  const sangkadBadge = `<span style="display:inline-block;background:rgba(6,182,212,0.15);color:#67e8f9;border:1px solid rgba(6,182,212,0.3);border-radius:4px;padding:1px 7px;font-size:10px;font-weight:600;font-family:var(--mono)">${c.sangkad}</span>`;
+  const selectedStyle = isSelected
+    ? 'border-color:var(--blue);background:rgba(59,130,246,0.1);box-shadow:0 0 0 1px var(--blue);'
+    : '';
+  return `<div class="course-card" id="cc-${origIdx}" data-idx="${origIdx}" onclick="openCourseDetail(${origIdx})" style="${selectedStyle}">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
+      <div class="cc-code">${c.code} <span style="font-weight:400;color:var(--muted)">Lv.${c.level}</span></div>
+      ${sangkadBadge}
+    </div>
+    <div class="cc-name">${c.name}</div>
+    <div class="cc-meta" style="margin-top:8px;">
+      <div><div class="cc-count">${c.count}</div><div style="font-size:10px;color:var(--muted)">นักเรียน</div></div>
+      <div style="text-align:right">
+        <div style="font-size:10px;color:var(--muted)">Rating คาดการณ์</div>
+        <div style="font-family:var(--mono);font-size:11px;color:${c.rating?'#fcd34d':'#64748b'}">${c.rating?fmtDate(c.rating):'รอ กพท.'}</div>
+      </div>
+    </div>
+    <div class="progress-bar" style="margin-top:10px;">
+      <div class="progress-fill" style="width:${c.progress}%;background:#10b981;"></div>
+    </div>
+    <div style="font-size:10px;color:var(--muted);margin-top:3px;">OJT Progress ~${c.progress}%</div>
+  </div>`;
+}
+
+// ── Render just the card grid (respects filter + selection) ──
+function renderCourseCards() {
+  const filtered = SORTED_COURSES.filter(c =>
+    courseFilterSangkad === 'all' || c.sangkad === courseFilterSangkad
+  );
+  const grid = document.getElementById('courseCardGrid');
+  if (!grid) return;
+  if (filtered.length === 0) {
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:30px 0;font-size:12px;">ไม่มีหลักสูตรในสังกัดที่เลือก</div>`;
+    return;
+  }
+  grid.innerHTML = filtered.map(c => {
+    const origIdx = COURSES.indexOf(c);
+    return buildCourseCard(c, origIdx, origIdx === selectedCourse);
+  }).join('');
+}
+
+// ── Filter change handler ──
+function onCourseFilter(val) {
+  courseFilterSangkad = val;
+  // If selected card is now hidden, deselect it
+  if (selectedCourse !== -1) {
+    const c = COURSES[selectedCourse];
+    if (val !== 'all' && c.sangkad !== val) {
+      selectedCourse = -1;
+      // Reset detail panel
+      document.getElementById('courseDetailWrap').innerHTML = `
+        <div class="detail-panel dp-placeholder"><div style="text-align:center;color:var(--muted);font-size:12px;"><div style="font-size:28px;margin-bottom:8px;opacity:0.3">☝</div>คลิก Course Card<br>เพื่อดูรายละเอียด</div></div>
+        <div class="detail-panel dp-placeholder"><div style="text-align:center;color:var(--muted);font-size:12px;">รายชื่อนักเรียนจะแสดงที่นี่</div></div>`;
+    }
+  }
+  renderCourseCards();
+}
 
 function renderCoursePage(){
   destroyCharts();
-  const D=DATA;
-  const totalStudents=COURSES.reduce((a,b)=>a+b.count,0);
-  const ratingThisYear=COURSES.filter(c=>c.rating&&new Date(c.rating).getFullYear()===2026).reduce((a,b)=>a+b.count,0);
-  const noRating=COURSES.filter(c=>!c.rating).reduce((a,b)=>a+b.count,0);
+  selectedCourse = -1;
+  courseFilterSangkad = 'all';
 
-  let courseCards='';
-  COURSES.forEach((c,i)=>{
-    courseCards+=`<div class="course-card" id="cc-${i}" onclick="openCourseDetail(${i})">
-      <div class="cc-code">${c.code} <span style="font-weight:400;color:var(--muted)">Lv.${c.level}</span></div>
-      <div class="cc-name">${c.name}</div>
-      <div class="cc-meta">
-        <div><div class="cc-count">${c.count}</div><div style="font-size:10px;color:var(--muted)">นักเรียน</div></div>
-        <div style="text-align:right">
-          <div style="font-size:10px;color:var(--muted)">Rating คาดการณ์</div>
-          <div style="font-family:var(--mono);font-size:11px;color:${c.rating?'#fcd34d':'#64748b'}">${c.rating?fmtDate(c.rating):'รอ กพท.'}</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:2px;">📍 ${c.sangkad}</div>
-        </div>
-      </div>
-      <div class="progress-bar"><div class="progress-fill" style="width:${c.progress}%;background:${progressColor(c.progress)}"></div></div>
-      <div style="font-size:10px;color:var(--muted);margin-top:3px;">OJT Progress ~${c.progress}%</div>
-    </div>`;
-  });
+  const totalStudents = COURSES.reduce((a,b)=>a+b.count, 0);
+  const ratingThisYear = COURSES.filter(c=>c.rating&&new Date(c.rating).getFullYear()===2026).reduce((a,b)=>a+b.count, 0);
+  const noRating = COURSES.filter(c=>!c.rating).reduce((a,b)=>a+b.count, 0);
 
-  // Gantt
-  const months=[];
-  const ms=new Date(GANTT_START);
-  while(ms<GANTT_END){
-    if(ms.getMonth()%6===0) months.push({label:String(ms.getFullYear()),pct:dayOffset(ms.toISOString().slice(0,10))});
+  // Gantt rows (sorted)
+  const months = [];
+  const ms = new Date(GANTT_START);
+  while(ms < GANTT_END){
+    if(ms.getMonth()%6===0) months.push({label:String(ms.getFullYear()), pct:dayOffset(ms.toISOString().slice(0,10))});
     ms.setMonth(ms.getMonth()+1);
   }
-  const monthRow=months.map(m=>`<div style="position:absolute;left:${m.pct}%;top:0;font-size:9px;color:var(--muted);border-left:1px solid var(--border2);padding-left:2px;height:100%">${m.label}</div>`).join('');
+  const monthRow = months.map(m=>`<div style="position:absolute;left:${m.pct}%;top:0;font-size:9px;color:var(--muted);border-left:1px solid var(--border2);padding-left:2px;height:100%">${m.label}</div>`).join('');
 
-  let ganttRows='';
-  COURSES.forEach(c=>{
-    const th_x=dayOffset(c.theory_start),th_w=dayWidth(c.theory_start,c.theory_end);
-    const oj_x=dayOffset(c.ojt_start),oj_w=dayWidth(c.ojt_start,c.ojt_end);
+  let ganttRows = '';
+  SORTED_COURSES.forEach(c=>{
+    const th_x=dayOffset(c.theory_start), th_w=dayWidth(c.theory_start,c.theory_end);
+    const oj_x=dayOffset(c.ojt_start),   oj_w=dayWidth(c.ojt_start,c.ojt_end);
     const rt_x=dayOffset(c.rating);
-    const ratingYear=c.rating?new Date(c.rating).getFullYear():null;
     ganttRows+=`<tr>
       <td class="gantt-name-cell" title="${c.name}">${c.code}</td>
       <td class="gantt-count">${c.count}</td>
@@ -805,9 +2110,13 @@ function renderCoursePage(){
         ${oj_w>0?`<div class="bar-ojt" style="left:${oj_x}%;width:${oj_w}%" title="OJT: ${fmtDate(c.ojt_start)} → ${fmtDate(c.ojt_end)}"></div>`:''}
         ${rt_x?`<div class="rating-dot" style="left:calc(${rt_x}% - 4px)" title="Rating: ${fmtDate(c.rating)}"></div>`:''}
       </div></td>
-      <td class="gantt-rating-cell">${ratingYear||'—'}</td>
+      <td class="gantt-rating-cell">${c.rating?new Date(c.rating).getFullYear():'—'}</td>
     </tr>`;
   });
+
+  // Sangkad filter options
+  const filterOpts = `<option value="all">ทุกสังกัด</option>`
+    + SANGKAD_LIST.map(s=>`<option value="${s}">${s}</option>`).join('');
 
   document.getElementById('page-course').innerHTML=`
     <div class="kpi-row-4" style="margin-bottom:16px;">
@@ -816,8 +2125,26 @@ function renderCoursePage(){
       <div class="kpi c-green"><div class="kpi-label">คาดได้ Rating ปี 2026</div><div class="kpi-value">${ratingThisYear}</div><div class="kpi-sub">ภายในปี 2026</div></div>
       <div class="kpi c-red"><div class="kpi-label">รอหลักสูตร / กพท.</div><div class="kpi-value">${noRating}</div><div class="kpi-sub">ยังไม่มีวันคาดการณ์</div></div>
     </div>
-    <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:12px;">📋 Course Cards — คลิกเพื่อดูรายละเอียด</div>
-    <div class="course-grid">${courseCards}</div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+      <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.6px;">
+        📋 Course Cards — เรียงตามวันที่คาดจะได้ Rating (เร็วที่สุดก่อน)
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span style="font-size:11px;color:var(--muted);">สังกัด:</span>
+        <select class="filter-sel" onchange="onCourseFilter(this.value)">${filterOpts}</select>
+      </div>
+    </div>
+    <div class="course-grid" id="courseCardGrid"></div>
+
+    <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:12px;margin-top:4px;">
+      🔍 รายละเอียดหลักสูตร — คลิก Card ด้านบน
+    </div>
+    <div class="detail-panel-wrap" id="courseDetailWrap" style="margin-bottom:14px;">
+      <div class="detail-panel dp-placeholder"><div style="text-align:center;color:var(--muted);font-size:12px;"><div style="font-size:28px;margin-bottom:8px;opacity:0.3">☝</div>คลิก Course Card<br>เพื่อดูรายละเอียด</div></div>
+      <div class="detail-panel dp-placeholder"><div style="text-align:center;color:var(--muted);font-size:12px;">รายชื่อนักเรียนจะแสดงที่นี่</div></div>
+    </div>
+
     <div class="card" style="margin-bottom:14px;">
       <div class="card-title"><div class="card-title-left"><span class="cdot" style="background:var(--blue)"></span>Gantt Timeline — ระยะเวลาหลักสูตร Theory → OJT → Rating</div></div>
       <div class="legend" style="margin-bottom:10px;">
@@ -837,28 +2164,28 @@ function renderCoursePage(){
         </table>
       </div>
     </div>
-    <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:12px;">🔍 รายละเอียดหลักสูตร — คลิก Card ด้านบน</div>
-    <div class="detail-panel-wrap" id="courseDetailWrap">
-      <div class="detail-panel dp-placeholder"><div style="text-align:center;color:var(--muted);font-size:12px;"><div style="font-size:28px;margin-bottom:8px;opacity:0.3">☝</div>คลิก Course Card<br>เพื่อดูรายละเอียด</div></div>
-      <div class="detail-panel dp-placeholder"><div style="text-align:center;color:var(--muted);font-size:12px;">รายชื่อนักเรียนจะแสดงที่นี่</div></div>
-    </div>
   `;
+
+  // Render cards after DOM is ready
+  renderCourseCards();
 }
 
 function openCourseDetail(idx){
-  document.querySelectorAll('.course-card').forEach((c,i)=>c.classList.toggle('selected',i===idx));
-  selectedCourse=idx;
-  const c=COURSES[idx];
-  const students=DATA.staff_students[DATA.locations.find(l=>l.name===c.sangkad||l.name.includes(c.sangkad.replace('.','')))||{id:'sj'}].id||[];
-  const locId=DATA.locations.find(l=>l.name===c.sangkad||c.sangkad.includes(l.name.replace('.','')))||DATA.locations[1];
-  const stuData=(DATA.staff_students[locId.id]||[]).filter(s=>!c.rating||!s.rating||(s.rating&&s.rating===new Date(c.rating).getFullYear())).slice(0,20);
-  const specCount=stuData.filter(s=>s.status&&s.status!=='-').length;
+  // Single selection
+  selectedCourse = idx;
+  renderCourseCards();
 
-  const wrap=document.getElementById('courseDetailWrap');
-  wrap.innerHTML=`
+  const c = COURSES[idx];
+
+  // Look up students directly from COURSE_STUDENTS by course code
+  const stuData = (COURSE_STUDENTS[c.code] || []);
+  const specCount = stuData.filter(s=>s.status && s.status!=='-').length;
+
+  const wrap = document.getElementById('courseDetailWrap');
+  wrap.innerHTML = `
     <div class="detail-panel">
       <div style="font-size:13px;font-weight:600;color:#f1f5f9;margin-bottom:3px;">${c.name}</div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:12px;">${c.code} · Level ${c.level} · ${c.sangkad}</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:12px;">${c.code} · Level ${c.level} · <span style="background:rgba(6,182,212,0.15);color:#67e8f9;border:1px solid rgba(6,182,212,0.3);border-radius:4px;padding:1px 6px;font-family:var(--mono);font-size:10px">${c.sangkad}</span></div>
       <div style="margin-bottom:8px;"><div class="phase-label">📖 Theory / Simulation</div><div class="phase-dates">${fmtDate(c.theory_start)} → ${fmtDate(c.theory_end)}</div><div style="font-size:10px;color:var(--muted)">${durMonths(c.theory_start,c.theory_end)}</div></div>
       <div style="margin-bottom:8px;"><div class="phase-label">🎓 OJT</div><div class="phase-dates">${fmtDate(c.ojt_start)} → ${fmtDate(c.ojt_end)}</div><div style="font-size:10px;color:var(--muted)">${durMonths(c.ojt_start,c.ojt_end)}</div></div>
       <div style="margin-bottom:12px;"><div class="phase-label">⭐ Rating คาดการณ์</div><div class="phase-dates" style="color:${c.rating?'#fcd34d':'#64748b'}">${fmtDate(c.rating)}</div></div>
@@ -866,20 +2193,28 @@ function openCourseDetail(idx){
         <div class="status-item"><div class="status-num" style="color:#93c5fd">${c.count}</div><div class="status-lbl">นักเรียนทั้งหมด</div></div>
         <div class="status-item"><div class="status-num" style="color:#fcd34d">${c.progress}%</div><div class="status-lbl">OJT Progress</div></div>
         <div class="status-item"><div class="status-num" style="color:#fca5a5">${specCount}</div><div class="status-lbl">สถานะพิเศษ</div></div>
-        <div class="status-item"><div class="status-num" style="color:#6ee7b7">${c.count-specCount}</div><div class="status-lbl">ปกติ</div></div>
+        <div class="status-item"><div class="status-num" style="color:#6ee7b7">${stuData.length - specCount}</div><div class="status-lbl">ปกติ</div></div>
       </div>
     </div>
     <div class="detail-panel">
-      <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:10px;">รายชื่อนักเรียน (${c.sangkad})</div>
+      <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:10px;">
+        รายชื่อนักเรียน · ${c.code} (${stuData.length} คน)
+      </div>
       <div class="staff-list">
         <table class="staff-tbl">
-          <thead><tr><th>#</th><th>ชื่อ-นามสกุล</th><th>ระดับ</th><th>คาดได้ Rating (ค.ศ.)</th><th>สถานะ</th></tr></thead>
+          <thead><tr>
+            <th style="width:28px">#</th>
+            <th>ชื่อ-นามสกุล</th>
+            <th>ระดับ</th>
+            <th style="text-align:right">คาดได้ Rating (ค.ศ.)</th>
+            <th>สถานะ</th>
+          </tr></thead>
           <tbody>
             ${stuData.map((s,i)=>`<tr>
               <td style="color:var(--muted);font-family:var(--mono);font-size:11px;">${i+1}</td>
               <td style="color:#e2e8f0">${s.name}</td>
               <td>${lvTag(s.lv)}</td>
-              <td style="font-family:var(--mono);font-size:11px;color:${s.rating?'#6ee7b7':'#64748b'}">${s.rating||'—'}</td>
+              <td style="font-family:var(--mono);font-size:11px;color:${s.rating?'#6ee7b7':'#64748b'};text-align:right">${s.rating||'—'}</td>
               <td>${statusTag(s.status)}</td>
             </tr>`).join('')}
           </tbody>

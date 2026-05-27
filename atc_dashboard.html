@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ATC Workforce Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0f1117;--surface:#181c27;--surface2:#1e2335;--surface3:#232840;
+  --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.04);
+  --blue:#3b82f6;--green:#10b981;--amber:#f59e0b;--red:#ef4444;--purple:#a78bfa;--teal:#06b6d4;
+  --text:#e2e8f0;--muted:#64748b;--font:"IBM Plex Sans Thai",sans-serif;--mono:"IBM Plex Mono",monospace;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);font-size:13px;}
+
+/* ── Top Navigation ── */
+.topnav{
+  position:sticky;top:0;z-index:100;
+  background:rgba(15,17,23,0.95);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 24px;height:54px;gap:0;
+}
+.nav-brand{display:flex;align-items:center;gap:10px;margin-right:32px;}
+.nav-brand .logo{width:28px;height:28px;background:var(--blue);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;}
+.nav-brand .title{font-size:13px;font-weight:600;color:#f1f5f9;line-height:1.2;}
+.nav-brand .subtitle{font-size:10px;color:var(--muted);}
+.nav-tabs{display:flex;gap:2px;flex:1;}
+.nav-tab{
+  padding:8px 18px;border-radius:8px;border:none;background:transparent;
+  color:var(--muted);font-size:12px;font-weight:500;cursor:pointer;
+  font-family:var(--font);transition:all 0.15s;display:flex;align-items:center;gap:7px;
+}
+.nav-tab:hover{color:var(--text);background:rgba(255,255,255,0.04);}
+.nav-tab.active{color:#f1f5f9;background:rgba(59,130,246,0.15);}
+.nav-tab .tab-icon{font-size:15px;}
+.nav-right{display:flex;align-items:center;gap:8px;}
+.update-badge{background:rgba(59,130,246,0.15);color:#93c5fd;border:1px solid rgba(59,130,246,0.3);padding:3px 10px;border-radius:20px;font-size:10px;font-family:var(--mono);}
+
+/* ── Pages ── */
+.page{display:none;padding:20px 24px;min-height:calc(100vh - 54px);}
+.page.active{display:block;}
+
+/* ── Common Cards ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;}
+.card-title{font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;}
+.card-title-left{display:flex;align-items:center;gap:7px;}
+.cdot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+
+/* ── KPI Row ── */
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px;}
+.kpi-row-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;position:relative;overflow:hidden;}
+.kpi::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;}
+.kpi.c-blue::before{background:var(--blue);}.kpi.c-amber::before{background:var(--amber);}
+.kpi.c-green::before{background:var(--green);}.kpi.c-red::before{background:var(--red);}
+.kpi.c-purple::before{background:var(--purple);}
+.kpi-label{color:var(--muted);font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px;}
+.kpi-value{font-size:26px;font-weight:600;font-family:var(--mono);line-height:1;}
+.kpi.c-blue .kpi-value{color:#93c5fd;}.kpi.c-amber .kpi-value{color:#fcd34d;}
+.kpi.c-green .kpi-value{color:#6ee7b7;}.kpi.c-red .kpi-value{color:#fca5a5;}
+.kpi.c-purple .kpi-value{color:#c4b5fd;}
+.kpi-sub{color:var(--muted);font-size:10px;margin-top:4px;}
+
+/* ── Grid layouts ── */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;}
+.grid-loc{display:grid;grid-template-columns:1fr 2fr;gap:14px;margin-bottom:14px;}
+.full{grid-column:1/-1;}
+.span2{grid-column:span 2;}
+
+/* ── Insight box ── */
+.insight-box{background:rgba(167,139,250,0.07);border:1px solid rgba(167,139,250,0.2);border-radius:8px;padding:10px 14px;font-size:11px;color:#c4b5fd;line-height:1.7;margin-bottom:16px;}
+.insight-box strong{color:#ddd6fe;}
+.warn-box{background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px 14px;font-size:11px;color:#fca5a5;margin-top:12px;line-height:1.6;}
+.note-box{background:rgba(59,130,246,0.05);border:1px solid rgba(59,130,246,0.2);border-radius:8px;padding:10px 14px;font-size:11px;color:#93c5fd;margin-top:12px;line-height:1.6;}
+.alert{border-radius:7px;padding:7px 11px;font-size:11px;line-height:1.6;margin-bottom:10px;}
+.alert-red{background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.2);color:#fca5a5;}
+.alert-amber{background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.2);color:#fcd34d;}
+.alert-green{background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.2);color:#6ee7b7;}
+
+/* ── Location bar table ── */
+.loc-table{width:100%;border-collapse:collapse;}
+.loc-table tr{border-bottom:1px solid var(--border);}
+.loc-table tr:last-child{border-bottom:none;}
+.loc-table td{padding:5px 4px;vertical-align:middle;}
+.loc-name{font-weight:500;color:var(--text);font-size:12px;width:90px;}
+.loc-bar-wrap{position:relative;width:100%;height:13px;background:rgba(255,255,255,0.04);border-radius:2px;overflow:hidden;}
+.loc-bar{height:100%;border-radius:2px;display:flex;align-items:center;justify-content:flex-end;padding-right:4px;}
+.loc-divider td{padding:4px 4px 2px;font-size:10px;color:#475569;text-transform:uppercase;letter-spacing:0.5px;border-bottom:none!important;}
+
+/* ── Projection ── */
+.proj-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
+.proj-year{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;}
+.proj-yr{color:var(--muted);font-size:11px;margin-bottom:5px;}
+.proj-total{font-family:var(--mono);font-size:24px;font-weight:600;color:#f1f5f9;}
+.proj-breakdown{margin-top:6px;display:flex;flex-direction:column;gap:3px;}
+.proj-item{display:flex;align-items:center;justify-content:space-between;font-size:11px;}
+.proj-item .lbl{color:var(--muted);}
+.val-new{font-family:var(--mono);color:#fcd34d;}
+.val-exp{font-family:var(--mono);color:#c4b5fd;}
+
+/* ── Net table ── */
+.net-tbl{width:100%;border-collapse:collapse;font-size:11px;}
+.net-tbl th{color:var(--muted);font-size:10px;font-weight:500;text-transform:uppercase;padding:4px 6px;text-align:right;border-bottom:1px solid var(--border);}
+.net-tbl th:first-child{text-align:left;}
+.net-tbl td{padding:6px;text-align:right;border-bottom:1px solid var(--border2);font-family:var(--mono);font-size:11px;}
+.net-tbl td:first-child{text-align:left;font-family:var(--font);}
+.net-tbl tr:last-child td{border-bottom:none;}
+
+/* ── Donut ── */
+.donut-wrap{position:relative;display:flex;align-items:center;justify-content:center;height:160px;}
+.donut-center{position:absolute;text-align:center;pointer-events:none;}
+
+/* ── Legend ── */
+.legend{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px;}
+.legend-item{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted);}
+.ldot{width:7px;height:7px;border-radius:1px;flex-shrink:0;}
+
+/* ── Gap analysis ── */
+.gap-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.gap-loc{width:82px;font-size:12px;font-weight:500;}
+
+/* ── Location selector ── */
+.loc-selector{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px;}
+.loc-btn{padding:4px 11px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:11px;cursor:pointer;font-family:var(--font);transition:all 0.15s;}
+.loc-btn:hover{border-color:rgba(59,130,246,0.4);color:#93c5fd;}
+.loc-btn.active{background:rgba(59,130,246,0.15);border-color:rgba(59,130,246,0.5);color:#93c5fd;font-weight:500;}
+.loc-btn.no-data{opacity:0.35;cursor:default;}
+
+/* ── Staff tabs ── */
+.tabs{display:flex;gap:0;margin-bottom:12px;border-bottom:1px solid var(--border);}
+.tab-btn{padding:7px 16px;font-size:12px;cursor:pointer;border:none;background:transparent;color:var(--muted);font-family:var(--font);border-bottom:2px solid transparent;transition:all 0.15s;margin-bottom:-1px;border-radius:6px 6px 0 0;}
+.tab-btn.active{color:#f1f5f9;background:rgba(59,130,246,0.12);border-bottom-color:var(--blue);font-weight:500;}
+.tab-btn:hover:not(.active){color:var(--text);background:rgba(255,255,255,0.03);}
+
+/* ── Filter bar ── */
+.filter-bar{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.filter-bar input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:12px;font-family:var(--font);outline:none;}
+.filter-bar input:focus{border-color:rgba(59,130,246,0.5);}
+.filter-bar input::placeholder{color:var(--muted);}
+.filter-sel{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:11px;font-family:var(--font);outline:none;cursor:pointer;flex-shrink:0;}
+
+/* ── Staff table ── */
+.staff-list{overflow-y:auto;max-height:380px;}
+.staff-tbl{width:100%;border-collapse:collapse;font-size:12px;}
+.staff-tbl th{position:sticky;top:0;background:var(--surface);color:var(--muted);font-size:10px;font-weight:500;text-transform:uppercase;padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);z-index:1;cursor:pointer;user-select:none;white-space:nowrap;}
+.staff-tbl th:hover{color:var(--text);}
+.staff-tbl th .sort-icon{margin-left:3px;opacity:0.5;}
+.staff-tbl th.sorted .sort-icon{opacity:1;color:var(--blue);}
+.staff-tbl td{padding:7px 8px;border-bottom:1px solid var(--border2);vertical-align:middle;}
+.staff-tbl tr:hover td{background:rgba(255,255,255,0.02);}
+.row-num{color:var(--muted);font-family:var(--mono);font-size:11px;width:28px;text-align:right;padding-right:12px!important;}
+.count-badge{font-family:var(--mono);font-size:11px;color:var(--muted);}
+.retire-soon{color:#fca5a5;font-weight:500;}
+.no-data-msg{text-align:center;color:var(--muted);padding:30px 0;font-size:12px;}
+.divider{height:1px;background:var(--border);margin:8px 0;}
+
+/* ── Pills ── */
+.pill{display:inline-block;padding:1px 7px;border-radius:20px;font-size:10px;font-weight:500;}
+.pill-blue{background:rgba(59,130,246,0.15);color:#93c5fd;}
+.pill-amber{background:rgba(245,158,11,0.15);color:#fcd34d;}
+.pill-green{background:rgba(16,185,129,0.15);color:#6ee7b7;}
+.pill-red{background:rgba(239,68,68,0.15);color:#fca5a5;}
+.pill-gray{background:rgba(100,116,139,0.15);color:#94a3b8;}
+.pill-purple{background:rgba(167,139,250,0.15);color:#c4b5fd;}
+.pill-teal{background:rgba(6,182,212,0.15);color:#67e8f9;}
+.cat-tag{display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:500;}
+.cat-new{background:rgba(245,158,11,0.15);color:#fcd34d;}
+.cat-exp{background:rgba(167,139,250,0.15);color:#c4b5fd;}
+
+/* ── Chart wraps ── */
+.chart-wrap{position:relative;}
+
+/* ── Course cards (Tab 3) ── */
+.course-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;}
+.course-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;cursor:pointer;transition:border-color 0.2s;}
+.course-card:hover{border-color:rgba(59,130,246,0.4);}
+.course-card.selected{border-color:var(--blue);background:rgba(59,130,246,0.04);}
+.cc-code{font-size:11px;font-weight:600;color:#93c5fd;font-family:var(--mono);margin-bottom:4px;}
+.cc-name{font-size:11px;color:#94a3b8;line-height:1.4;margin-bottom:10px;}
+.cc-meta{display:flex;align-items:flex-end;justify-content:space-between;font-size:11px;}
+.cc-count{font-family:var(--mono);font-weight:600;font-size:20px;color:#f1f5f9;}
+.progress-bar{height:3px;border-radius:2px;background:rgba(255,255,255,0.06);margin-top:8px;overflow:hidden;}
+.progress-fill{height:3px;border-radius:2px;}
+.gantt-timeline{position:relative;height:20px;min-width:200px;}
+.bar-theory{position:absolute;height:8px;border-radius:2px;top:2px;background:rgba(59,130,246,0.7);}
+.bar-ojt{position:absolute;height:8px;border-radius:2px;top:2px;background:rgba(16,185,129,0.65);}
+.rating-dot{position:absolute;width:8px;height:8px;border-radius:50%;top:1px;background:#f59e0b;border:1.5px solid #0f1117;}
+.detail-panel-wrap{display:grid;grid-template-columns:1fr 2fr;gap:12px;}
+.detail-panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;}
+.dp-placeholder{display:flex;align-items:center;justify-content:center;min-height:200px;}
+.phase-label{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.4px;color:var(--muted);margin-bottom:2px;}
+.phase-dates{font-size:12px;font-family:var(--mono);color:#e2e8f0;}
+.status-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px;}
+.status-item{background:var(--surface2);border-radius:6px;padding:8px;}
+.status-num{font-size:18px;font-weight:600;font-family:var(--mono);}
+.status-lbl{font-size:10px;color:var(--muted);margin-top:2px;}
+table.gantt{width:100%;border-collapse:collapse;font-size:11px;}
+table.gantt th{color:var(--muted);font-size:10px;text-transform:uppercase;padding:4px 6px;border-bottom:1px solid var(--border);font-weight:500;}
+table.gantt td{padding:5px 6px;border-bottom:1px solid var(--border2);vertical-align:middle;}
+table.gantt tr:hover td{background:rgba(255,255,255,0.02);}
+.gantt-name-cell{max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);}
+.gantt-count{font-family:var(--mono);text-align:right;color:#94a3b8;padding-right:8px!important;}
+.gantt-rating-cell{font-family:var(--mono);font-size:10px;color:#fcd34d;text-align:right;}
+
+@media(max-width:640px){
+  .kpi-row,.kpi-row-4{grid-template-columns:repeat(2,1fr);}
+  .grid-2,.grid-3,.grid-loc{grid-template-columns:1fr;}
+  .span2,.full{grid-column:1;}
+  .course-grid{grid-template-columns:1fr;}
+  .detail-panel-wrap{grid-template-columns:1fr;}
+  .proj-grid{grid-template-columns:repeat(2,1fr);}
+}
+</style>
+</head>
+<body>
+
+<!-- ── TOP NAV ── -->
+<nav class="topnav">
+  <div class="nav-brand">
+    <div class="logo">✈</div>
+    <div>
+      <div class="title">ATC Workforce Dashboard</div>
+      <div class="subtitle">กลุ่มควบคุมจราจรทางอากาศ</div>
+    </div>
+  </div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="switchPage('overview',this)">
+      <span class="tab-icon">📊</span> ภาพรวมองค์กร
+    </button>
+    <button class="nav-tab" onclick="switchPage('location',this)">
+      <span class="tab-icon">📍</span> รายศูนย์
+    </button>
+    <button class="nav-tab" onclick="switchPage('course',this)">
+      <span class="tab-icon">🎓</span> หลักสูตรฝึกอบรม
+    </button>
+  </div>
+  <div class="nav-right">
+    <span class="update-badge" id="updateBadge">Loading...</span>
+  </div>
+</nav>
+
+<!-- ══════════════════════════════════════════
+     PAGE 1: OVERVIEW
+══════════════════════════════════════════ -->
+<div class="page active" id="page-overview"></div>
+
+<!-- ══════════════════════════════════════════
+     PAGE 2: LOCATION
+══════════════════════════════════════════ -->
+<div class="page" id="page-location">
+  <div class="loc-selector" id="locSelector"></div>
+  <div id="locContent"></div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PAGE 3: COURSE
+══════════════════════════════════════════ -->
+<div class="page" id="page-course"></div>
+
+<script>
+// ═══════════════════════════════════════════
+// DATA (generated from Excel 2026-04)
+// ═══════════════════════════════════════════
+const DATA = {"updated": "2026-04", "locations": [{"id": "sk", "name": "ศก.", "full": "ศูนย์ควบคุมการบินกรุงเทพ (ศก.)", "licensed": 316, "students": 23, "pipeline": 0, "avgSen": 19.5, "roles": {"full": 91, "atc1": 90, "atc2_3": 135}, "retire": [1, 2, 3, 5, 6, 10, 13, 15, 15, 22], "newCtrl": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "lv7": 23, "lv5": 0, "courses": [], "tpStatus": [], "noData": false}, {"id": "sj", "name": "ศจ.", "full": "ศูนย์ควบคุมจราจรทางอากาศกรุงเทพ (ศจ.)", "licensed": 197, "students": 75, "pipeline": 74, "avgSen": 22.6, "roles": {"full": 106, "atc1": 43, "atc2_3": 48}, "retire": [2, 3, 10, 11, 9, 11, 10, 7, 7, 10], "newCtrl": [48, 0, 26, 0, 0, 0, 0, 0, 0, 0], "lv7": 75, "lv5": 0, "courses": [" (Senior Air Traffic Controller (Area Control Procedural Rating))", "ACP (Area Control (Procedural): BACC Unit Endorsement Course)", "ACS (Area Control (Surveillance): BACC Unit Endorsement Course)"], "tpStatus": [], "noData": false}, {"id": "sb", "name": "ศบ.", "full": "ศูนย์ควบคุมจราจรทางอากาศภูมิภาค (ศบ.)", "licensed": 72, "students": 20, "pipeline": 21, "avgSen": 16.9, "roles": {"full": 25, "atc1": 10, "atc2_3": 37}, "retire": [0, 0, 1, 2, 2, 6, 1, 2, 3, 3], "newCtrl": [5, 0, 8, 8, 0, 0, 0, 0, 0, 0], "lv7": 5, "lv5": 15, "courses": ["APP-Chiangrai Sector (Approach Control Procedural Rating (Chiang Rai Sector))", "APP-Samui Sector (Approach Control Procedural Rating (Samui Sector))", "APS-Samui Sector (Approach Control Surveillance Rating (Samui Sector))"], "tpStatus": [{"label": "Terminated", "count": 1}], "noData": false}, {"id": "sn", "name": "ศน.บภ 1.", "full": "ศน.บภ 1.", "licensed": 0, "students": 0, "pipeline": 0, "avgSen": 0, "roles": {"full": 0, "atc1": 0, "atc2_3": 0}, "retire": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "newCtrl": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "lv7": 0, "lv5": 0, "courses": [], "tpStatus": [], "noData": true}, {"id": "sp", "name": "ศภ.บภ 1.", "full": "ศูนย์ควบคุมการบินภูเก็ต (ศภ.บภ 1.)", "licensed": 77, "students": 25, "pipeline": 25, "avgSen": 16.1, "roles": {"full": 14, "atc1": 8, "atc2_3": 55}, "retire": [1, 0, 0, 1, 0, 1, 3, 1, 3, 2], "newCtrl": [9, 0, 0, 0, 0, 0, 0, 0, 0, 0], "lv7": 0, "lv5": 25, "courses": ["ADV/ADI-VTSG (Aerodrome Control (ADV/ADI): Unit Endorsement Course (Krabi Airport))", "ADV/ADI-VTSP (Aerodrome Control (ADV/ADI): Unit Endorsement Course (Phuket Airport))"], "tpStatus": [{"label": "พักรักษาตัวจากอุบัติเหตุ", "count": 1}, {"label": "รอการทดสอบจาก มป.", "count": 7}, {"label": "รอหลักสูตรได้รับความเห็นชอบจาก กพท. ", "count": 16}, {"label": "ลาออก", "count": 1}], "noData": false}, {"id": "sy", "name": "ศญ.บภ 1.", "full": "ศญ.บภ 1.", "licensed": 0, "students": 0, "pipeline": 0, "avgSen": 0, "roles": {"full": 0, "atc1": 0, "atc2_3": 0}, "retire": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "newCtrl": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "lv7": 0, "lv5": 0, "courses": [], "tpStatus": [], "noData": true}, {"id": "sr", "name": "ศร.บภ 1.", "full": "ศูนย์ควบคุมการบินสุราษฎร์ธานี (ศร.บภ 1.)", "licensed": 47, "students": 9, "pipeline": 4, "avgSen": 14.4, "roles": {"full": 9, "atc1": 12, "atc2_3": 26}, "retire": [0, 0, 1, 1, 1, 0, 2, 0, 2, 0], "newCtrl": [0, 4, 0, 0, 0, 0, 0, 0, 0, 0], "lv7": 0, "lv5": 9, "courses": ["ADC-VTSM (Aerodrome Control Rating (Samui Airport))"], "tpStatus": [], "noData": false}, {"id": "sc", "name": "ศช.บภ 2.", "full": "ศูนย์ควบคุมการบินเชียงใหม่ (ศช.บภ 2.)", "licensed": 62, "students": 13, "pipeline": 6, "avgSen": 20.0, "roles": {"full": 18, "atc1": 14, "atc2_3": 30}, "retire": [0, 4, 1, 2, 2, 1, 4, 3, 4, 2], "newCtrl": [6, 0, 0, 0, 0, 0, 0, 0, 0, 0], "lv7": 0, "lv5": 13, "courses": ["ADV/ADI-VTCT (Aerodrome Control (ADV/ADI): Unit Endorsement Course (Mae Fah Luang - Chiang Rai International Airport))"], "tpStatus": [], "noData": false}, {"id": "sl", "name": "ศล.บภ 2.", "full": "ศูนย์ควบคุมการบินพิษณุโลก (ศล.บภ 2.)", "licensed": 40, "students": 9, "pipeline": 6, "avgSen": 19.4, "roles": {"full": 15, "atc1": 8, "atc2_3": 17}, "retire": [1, 2, 2, 2, 4, 0, 3, 0, 3, 2], "newCtrl": [6, 0, 0, 0, 0, 0, 0, 0, 0, 0], "lv7": 0, "lv5": 9, "courses": ["ADC-VTCN (Aerodrome Control Rating (Nan Nakhon Airport))", "ADC-VTPO (Aerodrome Control Rating (Sukhothai Airport))"], "tpStatus": [], "noData": false}, {"id": "sbb", "name": "ศบ.บภ 2.", "full": "ศูนย์ควบคุมการบินอุบลราชธานี (ศบ.บภ 2.)", "licensed": 15, "students": 2, "pipeline": 0, "avgSen": 16.3, "roles": {"full": 6, "atc1": 2, "atc2_3": 7}, "retire": [0, 0, 1, 0, 0, 0, 1, 0, 2, 0], "newCtrl": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "lv7": 0, "lv5": 2, "courses": ["ADC-VTUV (Aerodrome Control (ADV/ADI): Unit Endorsement Course (Roi Et Airport))"], "tpStatus": [], "noData": false}, {"id": "so", "name": "ศอ.บภ 2.", "full": "ศูนย์ควบคุมการบินอุดรธานี (ศอ.บภ 2.)", "licensed": 37, "students": 3, "pipeline": 0, "avgSen": 17.7, "roles": {"full": 12, "atc1": 6, "atc2_3": 19}, "retire": [0, 1, 0, 1, 3, 2, 1, 2, 0, 0], "newCtrl": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "lv7": 0, "lv5": 3, "courses": [], "tpStatus": [], "noData": false}, {"id": "sm", "name": "ศม.บภ 2.", "full": "ศูนย์ควบคุมการบินบุรีรัมย์ (ศม.บภ 2.)", "licensed": 4, "students": 6, "pipeline": 5, "avgSen": 14.2, "roles": {"full": 2, "atc1": 0, "atc2_3": 2}, "retire": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "newCtrl": [5, 0, 0, 0, 0, 0, 0, 0, 0, 0], "lv7": 0, "lv5": 6, "courses": ["ADC-VTUO (Aerodrome Control (ADV/ADI): Unit Endorsement Course (Buri Ram Airport))", "ADC-VTUQ (Aerodrome Control (ADV/ADI): Unit Endorsement Course (Nakhon Ratchasima Airport))"], "tpStatus": [], "noData": false}], "staff_licensed": {"sk": [{"name": "นายชัยยุทธ์ ตันทโอภาส", "pos": "ผจก.", "ret": 2027}, {"name": "นายวิเชียร บูชาธรรมรัตน์", "pos": "ผจก.", "ret": 2026}, {"name": "นายสหรัฐ นาคประชา", "pos": "ผจก.", "ret": 2029}, {"name": "นางนวลพรรณ ตันทโอภาส", "pos": "ผจก.", "ret": 2030}, {"name": "น.ส.วารารัตน์ ถิระศักดิ์", "pos": "ผจก.", "ret": 2031}, {"name": "นายณัฐสันติ์ ปรีเลิศ", "pos": "ผจก.", "ret": 2031}, {"name": "นางเรณู บุญเต็งชาญ", "pos": "ผจก.", "ret": 2031}, {"name": "นายธนาพงศ์ พุฒิไชยนันท์", "pos": "ผจก.", "ret": 2032}, {"name": "นายศุภชัย สุนิมิตร", "pos": "ผจก.", "ret": 2032}, {"name": "นายธวัชชัย ชนปัญญาสกุล", "pos": "ผจก.", "ret": 2031}, {"name": "นางสิมาพร ผาทอง", "pos": "ผจก.", "ret": 2034}, {"name": "น.ส.ศรีสวัสดิ์ นนท์ประเสริฐ", "pos": "ผจก.", "ret": 2031}, {"name": "นางอุมาพรรณ พรหมเสนา", "pos": "ผจก.", "ret": 2034}, {"name": "นายเดี่ยว แม้นเดช", "pos": "ผจก.", "ret": 2032}, {"name": "นางดาริกา เลิศล้ำ", "pos": "ผจก.", "ret": 2034}, {"name": "น.ส.พริ้มเพรา กาญจนกีรณา", "pos": "ผจก.", "ret": 2033}, {"name": "นางนงลักษณ์ โกมุทแดง", "pos": "ผจก.", "ret": 2033}, {"name": "นายเอกพงศ์ พ้นภัย", "pos": "ผจก.", "ret": 2034}, {"name": "นายณัฐพล ประยูรศิริศักดิ์", "pos": "ผจก.", "ret": 2035}, {"name": "นางนันทวัน แสงธาราทิพย์", "pos": "ผจก.", "ret": 2033}, {"name": "นายนิรุธ พุทธสถิตย์", "pos": "ผจก.", "ret": 2030}, {"name": "นางศรัญญา ชนานาฎ", "pos": "ผจก.", "ret": 2032}, {"name": "นายมนตรี กงเพชร", "pos": "ผจก.", "ret": 2032}, {"name": "นายชัยยันตร์ ตันติสวัสดิ์วงศ์", "pos": "ผจก.", "ret": 2028}, {"name": "นายประทีป แก้วสุริวงษ์", "pos": "ผจก.", "ret": 2032}, {"name": "นายชำนาญ นุ่มดี", "pos": "ผจก.", "ret": 2033}, {"name": "น.ส.ทิพวรรณ นนทรีย์", "pos": "ผจก.", "ret": 2031}, {"name": "นางอารยา ประสงค์ทรัพย์", "pos": "ผจก.", "ret": 2032}, {"name": "นางวนาลักษณ์ พัฒนวราภรณ์", "pos": "ผจก.", "ret": 2035}, {"name": "นางโชติมา กิ่งเงิน", "pos": "ผจก.", "ret": 2033}, {"name": "นายศวิต เลือดนักรบ", "pos": "ผจก.", "ret": 2035}, {"name": "นายณัฏฐพงศ์ ทัศนาทร", "pos": "ผจก.", "ret": 2035}, {"name": "นายอานนท์ ไพศาลอัชพงษ์", "pos": "ผจก.", "ret": 2034}, {"name": "น.ส.ชิตตมา สุวรรณเลิศ", "pos": "ผจก.", "ret": 2031}, {"name": "นายอิสรา ทัพพวิบูล", "pos": "ผจก.", "ret": 2033}, {"name": "นายกฤษณ์ จันทรโกศล", "pos": "ผจก.", "ret": 2027}, {"name": "น.ส.มัญชุกานด์ ณ สงขลา", "pos": "ผจก.", "ret": 2033}, {"name": "นายนิรัติศัย พรหมสาขา ณ สกลนคร", "pos": "ผจก.", "ret": 2029}, {"name": "น.ส.ณัฐธดา จิตจง", "pos": "ผจก.", "ret": 2030}, {"name": "น.ส.วิวรรยา แป้นพันธุ์", "pos": "ATC ๒", "ret": 2034}, {"name": "น.ส.ยุวพร วงสากล", "pos": "ผจก.", "ret": 2033}, {"name": "นางบูลวิภา สู่เจริญ", "pos": "ผจก.", "ret": 2033}, {"name": "นางสุรวดี สกุลรักษ์", "pos": "ผจก.", "ret": 2033}, {"name": "นายศุภสิทธิ์ สุภกรรม", "pos": "ATC ๒", "ret": 2033}, {"name": "นางขนิษฐา แก้วสุริวงษ์", "pos": "ผจก.", "ret": 2035}, {"name": "ร.อ.อภิรักษ์ พรหมชนะ", "pos": "ผจก.", "ret": 2029}, {"name": "นายรังสรรค์ ราวีศรี", "pos": "ผจก.", "ret": 2029}, {"name": "นางธัญพิชชา ดวงทองพูล", "pos": "ผจก.", "ret": 2032}, {"name": "พ.อ.ต.เศกสรรค์ พยัคฆะโส", "pos": "ผจก.", "ret": 2028}, {"name": "นายอนันต์ เชื้อสุพรรณ", "pos": "ผจก.", "ret": 2030}, {"name": "นายวรัตถ์ชัย พฤกษ์พราวพงศ์", "pos": "ผจก.", "ret": 2037}, {"name": "นายพุฒิพงษ์ แสงแก้วศรี", "pos": "ผจก.", "ret": 2034}, {"name": "นายศุภรัชต์ มั่นระวัง", "pos": "ผจก.", "ret": 2032}, {"name": "น.ส.เสาวลักษณ์ ณ ถลาง", "pos": "ผจก.", "ret": 2035}, {"name": "น.ส.ปวีณา สุภาพ", "pos": "ATC ๒", "ret": 2032}, {"name": "น.ส.ชนาพร ศกุนรักษ์", "pos": "ผจก.", "ret": 2036}, {"name": "น.ส.ครองพร ไชยรังสินันท์", "pos": "ผจก.", "ret": 2034}, {"name": "น.ส.ธนิดา บรรเทิงจิตต์", "pos": "ATC ๒", "ret": 2035}, {"name": "ร.ท.อดิเรก มีฤทธิ์", "pos": "ผจก.", "ret": 2032}, {"name": "ร.อ.นภพล โรจนวิภาต", "pos": "ผจก.", "ret": 2028}, {"name": "ร.อ.วัฒนชัย เพ่งพินิจ", "pos": "ผจก.", "ret": 2030}, {"name": "นายนิรันดร์ พูนวงศ์ประชา", "pos": "ผจก.", "ret": 2035}, {"name": "น.ส.ภัทราภรณ์ ชมสวน", "pos": "ATC ๒", "ret": 2034}, {"name": "น.ส.กตัญชลี วีรเดชะ", "pos": "ผจก.", "ret": 2035}, {"name": "น.ส.ศศิธร คุ้มทรัพย์", "pos": "ผจก.", "ret": 2035}, {"name": "น.ส.กรรณิการ์ เกศอรุณสกุล", "pos": "ผจก.", "ret": 2032}, {"name": "น.ส.ศิริรัชดา บูรณะพลานามัย", "pos": "ผจก.", "ret": 2031}, {"name": "น.ส.นาลินี บาลี", "pos": "ผจก.", "ret": 2030}, {"name": "นางดุจพิมพ์พร ดำรงทวีศักดิ์", "pos": "ผจก.", "ret": 2033}, {"name": "ร.อ.ณัฐ ตันธวัช", "pos": "ผจก.", "ret": 2031}, {"name": "นางอินทิรา สุทธิธนาภรณ์", "pos": "ผจก.", "ret": 2033}, {"name": "นายประธาน อ้นปันส์", "pos": "ผจก.", "ret": 2034}, {"name": "นายธีรพงศ์ วงศ์ศิริประเสริฐ", "pos": "ผจก.", "ret": 2032}, {"name": "น.ส.รติกาญจน์ งานดี", "pos": "ผจก.", "ret": 2036}, {"name": "น.ส.วิภาดา สมหวัง", "pos": "ATC ๒", "ret": 2031}, {"name": "น.ส.อรดี เบญจพงษ์", "pos": "ผจก.", "ret": 2029}, {"name": "นางดรรชพร จิตตรีขันธ์", "pos": "ผจก.", "ret": 2033}, {"name": "นายอรรคสิทธิ์ เหล่าวนิชย์", "pos": "ATC ๒", "ret": 2035}, {"name": "น.ส.รัชดา จงสุขเกษม", "pos": "ผจก.", "ret": 2035}, {"name": "น.ส.รัตนาภรณ์ อาลัยสุข", "pos": "ผจก.", "ret": 2037}, {"name": "นายมรรคพล สุขสว่าง", "pos": "ผจก.", "ret": 2037}, {"name": "นางศศิธร ไวถนอมสัตว์", "pos": "ผจก.", "ret": 2033}, {"name": "นายสุพลศิษฏ์ อู่วิเชียร", "pos": "ผจก.", "ret": 2034}, {"name": "นายอธิป สมเชื้อเวียง", "pos": "ATC ๒", "ret": 2036}, {"name": "นายพุธฒิ เมฆธารา", "pos": "ผจก.", "ret": 2037}, {"name": "นายชัยนรินทร์ แก้วจินดา", "pos": "ผจก.", "ret": 2039}, {"name": "น.ส.ธนิดา วรสรรพวิทย์", "pos": "ผจก.", "ret": 2036}, {"name": "น.ส.วันมาฆ์ ทะสังขา", "pos": "ATC ๒", "ret": 2038}, {"name": "นางศิวพร พานิช", "pos": "ATC ๒", "ret": 2040}, {"name": "น.ส.กมลวรรณ สุดใจ", "pos": "ATC ๒", "ret": 2037}, {"name": "นายปริวรรต ภู่โชติ", "pos": "ผจก.", "ret": 2038}, {"name": "น.ส.พอตา วงศาโรจน์", "pos": "ATC ๒", "ret": 2037}, {"name": "นายพงษ์พิพัฒน์ ลับไพรี", "pos": "ผจก.", "ret": 2038}, {"name": "นายเกรียงศักดิ์ สหะชาติ", "pos": "ผจก.", "ret": 2038}, {"name": "นางปัทมาภรณ์ กิตติกุลวานิช", "pos": "ผจก.", "ret": 2039}, {"name": "นางพรเพ็ญ ศรีทองแท้", "pos": "ผจก.", "ret": 2038}, {"name": "นางรสธร บุญรอด", "pos": "ผจก.", "ret": 2039}, {"name": "น.ส.นฤมล จิวะณโกศลวงศ์", "pos": "ATC ๒", "ret": 2038}, {"name": "นายอัคราวัส สุนทรทัยโรจน์", "pos": "ATC ๒", "ret": 2038}, {"name": "น.ส.อุษณีย์ คล้ายวิเชียร", "pos": "ATC ๒", "ret": 2035}, {"name": "นางวราพร จิตรบรรจง", "pos": "ATC ๒", "ret": 2034}, {"name": "นายอดิชล พุทธสุวรรณ", "pos": "ATC ๒", "ret": 2040}, {"name": "นายจิระ แก้วไทรหาญ", "pos": "ATC ๒", "ret": 2035}, {"name": "นายณัฐฐ์ คันธวิวรณ์", "pos": "ATC ๒", "ret": 2035}, {"name": "นายบัญชา รวีสวัสดิ์", "pos": "ผจก.", "ret": 2037}, {"name": "นายธีรพล ยิ่งกิจสถาวร", "pos": "ATC ๒", "ret": 2036}, {"name": "นางวัลย์ลิกา งามจรรยาภรณ์", "pos": "ผจก.", "ret": 2036}, {"name": "น.ส.สิรินดา แซ่ตั๊น", "pos": "ATC ๒", "ret": 2038}, {"name": "นายพงษ์ศักดิ์ มากมิ่ง", "pos": "ผจก.", "ret": 2037}, {"name": "น.ส.กัลยาณี กาญจนวิภาพร", "pos": "ATC ๒", "ret": 2040}, {"name": "นายสิทธิโรจน์ ชมเชย", "pos": "ATC ๒", "ret": 2034}, {"name": "นายอมร ลีวัฒนาวงศ์", "pos": "ATC ๒", "ret": 2035}, {"name": "น.ส.ผจงสรรค์ ประพัฒน์ทอง", "pos": "ATC ๒", "ret": 2038}, {"name": "น.ส.อภิดาภา มณีโชติ", "pos": "ATC ๒", "ret": 2038}, {"name": "นางกมลวรรณ วุฒิวิมล", "pos": "ATC ๒", "ret": 2035}, {"name": "น.ส.ศศิชา วงษ์สมุทร", "pos": "ATC ๒", "ret": 2038}, {"name": "นางณัฐา เรืองเดช", "pos": "ATC ๒", "ret": 2038}, {"name": "น.ส.นวลวรรณ แก้ววิเชียรพี", "pos": "ATC ๒", "ret": 2040}, {"name": "น.ส.ภรินทร เร่งสำประทวน", "pos": "ATC ๒", "ret": 2035}, {"name": "นางพรพรรณ พรณรงค์", "pos": "ATC ๒", "ret": 2038}, {"name": "น.ส.ณัชชา รัตน์ประโลม", "pos": "ATC ๒", "ret": 2039}, {"name": "ร.ท.กิติพนธ์ กิติกุล", "pos": "ATC ๒", "ret": 2035}, {"name": "น.ส.วิธิดา ศรัทธาพร", "pos": "ATC ๒", "ret": 2036}, {"name": "นายศรัณย์ อุดมนิทัศน์", "pos": "ATC ๒", "ret": 2041}, {"name": "นายนรัญจ์ โสวรรณไพบูลย์", "pos": "ATC ๒", "ret": 2036}, {"name": "น.ส.รัตนา เสมาทัศน์", "pos": "ATC ๒", "ret": 2037}, {"name": "นายนศิร์ ศรีทองแท้", "pos": "ATC ๒", "ret": 2040}, {"name": "น.ส.ฉัตรอมร น้อมมนัส", "pos": "ATC ๒", "ret": 2036}, {"name": "น.ส.อิสริยา แก้วกัลยา", "pos": "ATC ๒", "ret": 2040}, {"name": "น.ส.พักตร์พริ้ง ธนาทวีวัฒน์", "pos": "ATC ๒", "ret": 2039}, {"name": "น.ส.ภัทราภรณ์ เฉลิมสุข", "pos": "ATC ๒", "ret": 2038}, {"name": "น.ส.ศุภาภัค เมฆใหญ่", "pos": "ATC ๒", "ret": 2040}, {"name": "น.ส.สุพรรณี จันทร์น้อย", "pos": "ATC ๒", "ret": 2040}, {"name": "น.ส.จิณัฐตา วัดคำ", "pos": "ATC ๒", "ret": 2036}, {"name": "นายบดินทร์ รอดตัว", "pos": "ATC ๒", "ret": 2039}, {"name": "น.ส.ศิรประภา ประดับพงษา", "pos": "ATC ๒", "ret": 2041}, {"name": "นายอัศวิน คงคาหลวง", "pos": "ATC ๒", "ret": 2037}, {"name": "นายดำรง พานิช", "pos": "ATC ๒", "ret": 2036}, {"name": "นายนัยสิทธิ์ วงษ์เกลียวเรียน", "pos": "ATC ๒", "ret": 2040}, {"name": "น.ส.พรพรรณ โล่ห์ชิงชัยฤทธิ์", "pos": "ATC ๒", "ret": 2037}, {"name": "น.ส.สุรัสวดี รุ่งสว่าง", "pos": "ATC ๒", "ret": 2039}, {"name": "น.ส.มนวิภา พลเสน", "pos": "ATC ๒", "ret": 2034}, {"name": "น.ส.ศศิวิภา ศรัณยพงศ์", "pos": "ATC ๒", "ret": 2038}, {"name": "น.ส.วดี นามมนตรี", "pos": "ATC ๒", "ret": 2038}, {"name": "น.ส.สุวนีย์ กันตะปีติ", "pos": "ATC ๒", "ret": 2041}, {"name": "นายธนิต อิ่มใจ", "pos": "ATC ๒", "ret": 2039}, {"name": "นายเกียรติภิญโญ วัฒนะแสงมีชัย", "pos": "ATC ๒", "ret": 2040}, {"name": "น.ส.วรวิมล คชทิน", "pos": "ATC ๒", "ret": 2041}, {"name": "นายชัยรัตน์ ปาณภัทรกุล", "pos": "ATC ๒", "ret": 2040}, {"name": "น.ส.นนทนัช เนติพัฒน์", "pos": "ATC ๒", "ret": 2040}, {"name": "น.ส.ปนัดดา พิชญพจน์", "pos": "ATC ๒", "ret": 2041}, {"name": "นายเหิรฟ้า ภูติพันธุ์", "pos": "ATC ๒", "ret": 2038}, {"name": "น.ส.อารียา ทวีศักดิ์สกุล", "pos": "ATC ๒", "ret": 2035}, {"name": "นายณัฏฐพงศ์ นาคเอี่ยม", "pos": "ATC ๒", "ret": 2040}, {"name": "นางพนิตตา อภิสุนทรางกูร", "pos": "ATC ๒", "ret": 2038}, {"name": "น.ส.กิ่งอนงค์ บัวแก้ว", "pos": "ATC ๒", "ret": 2035}, {"name": "นายสมบูรณ์ เบญจสุวรรณเทพ", "pos": "ATC ๒", "ret": 2035}, {"name": "นายศักดิ์รพี ทิมมาศย์", "pos": "ATC ๒", "ret": 2038}, {"name": "นางจิตรลัดดา ม่วงบุญศรี", "pos": "ATC ๒", "ret": 2037}, {"name": "นางวชิราภรณ์ ชัยวัฒนากุลกิจ", "pos": "ผจก.", "ret": 2041}, {"name": "น.ส.ภัสสร์จรรย์ มาศโอสถ", "pos": "ATC ๒", "ret": 2040}, {"name": "น.ส.นภาพร นิภานพดล", "pos": "ATC ๒", "ret": 2039}, {"name": "นายชยกฤต บัลลังก์โพธิ์", "pos": "ATC ๒", "ret": 2039}, {"name": "น.ส.กษมา อินเทียม", "pos": "ATC ๒", "ret": 2041}, {"name": "น.ส.กรองใจ จันทร์สว่าง", "pos": "ATC ๒", "ret": 2042}, {"name": "นางสุวิชชา วาทหงษ์", "pos": "ATC ๒", "ret": 2042}, {"name": "นายวิภาชเอก วาทหงษ์", "pos": "ATC ๒", "ret": 2039}, {"name": "นายปัณณวิช หนองเต่าดำ", "pos": "ATC ๒", "ret": 2042}, {"name": "น.ส.ปิยเนตร ฉั่วสมบูรณ์", "pos": "ATC ๒", "ret": 2040}, {"name": "นายรัฐศักดิ์ สมานสิน", "pos": "ATC ๒", "ret": 2042}, {"name": "น.ส.พรปวีณ์ พิสิฐประภา", "pos": "ผจก.", "ret": 2042}, {"name": "น.ส.ศรัณยา แป้นถึง", "pos": "ATC ๒", "ret": 2039}, {"name": "นายชินัมพร จันทร์เรือง", "pos": "ATC ๒", "ret": 2041}, {"name": "นายเริงชัย ศรีอำไพ", "pos": "ATC ๒", "ret": 2041}, {"name": "น.ส.พิชอาภา พิริยหะพันธุ์", "pos": "ATC ๒", "ret": 2038}, {"name": "น.ส.ขวัญสุขสิริ จึงมีลาภ", "pos": "ATC ๒", "ret": 2040}, {"name": "น.ส.อัณณ์ณิชา มีโชค", "pos": "ATC ๒", "ret": 2039}, {"name": "น.ส.วิไลลักษณ์ ยั่งยืนสุข", "pos": "ATC ๒", "ret": 2038}, {"name": "ว่าที่ ร.อ.สาธิต เสกนำโชค", "pos": "ATC ๒", "ret": 2040}, {"name": "น.ส.สมรพรรณ จันทร์กระจ่าง", "pos": "ATC ๒", "ret": 2042}, {"name": "น.ส.สุรีรัตน์ สายจันทร์", "pos": "ATC ๒", "ret": 2042}, {"name": "น.ส.สุชาธิษณ์ สิงห์ปัน", "pos": "ATC ๒", "ret": 2039}, {"name": "นายเอกภพ ทรงเจริญ", "pos": "ATC ๒", "ret": 2039}, {"name": "น.ส.ธิดา พงษ์เจตสุพรรณ", "pos": "ATC ๒", "ret": 2040}, {"name": "น.ส.สรัญรักษ์ พิชญธนากุล", "pos": "ATC ๒", "ret": 2042}, {"name": "นางสิชล รอดตัว", "pos": "ATC ๒", "ret": 2042}, {"name": "นายคเณศ ชะนันชนะ", "pos": "ATC ๒", "ret": 2041}, {"name": "นายพฤษภ์ สมพงษ์", "pos": "ATC ๒", "ret": 2040}, {"name": "นายนวสิทธิ์ ศรีจันทร์ทับ", "pos": "ATC ๒", "ret": 2042}, {"name": "น.ส.วิไลรัตน์ อานนท์ตระกูล", "pos": "ATC ๒", "ret": 2041}, {"name": "น.ส.ณัฏฐินี นนท์คำภา", "pos": "ATC ๒", "ret": 2044}, {"name": "นายกมลชัย ศิริเพิ่มพูลธรรม", "pos": "ATC ๒", "ret": 2044}, {"name": "น.ส.ณัฐณิชา น้อยพงษ์", "pos": "ATC ๒", "ret": 2041}, {"name": "นายพิสุทธิ์ มากศิริ", "pos": "ATC ๒", "ret": 2044}, {"name": "น.ส.ธนิตา กิตติวรรณ", "pos": "ATC ๒", "ret": 2040}, {"name": "นายณภัทร รอดเหตุภัย", "pos": "ATC ๒", "ret": 2043}, {"name": "นายชาตรี พวงเพชร", "pos": "ATC ๒", "ret": 2040}, {"name": "น.ส.วงศ์วรัณ ศิลาน้อย", "pos": "ATC ๒", "ret": 2040}, {"name": "น.ส.ธิติกานต์ พันธ์พัฒนกุล", "pos": "ATC ๒", "ret": 2042}, {"name": "น.ส.พรรณนที งามเจริญ", "pos": "ATC ๒", "ret": 2044}, {"name": "ร.ท.ราชศักดิ์ จั่นเงิน", "pos": "ATC ๒", "ret": 2042}, {"name": "น.ส.รุจิเรข คำโมง", "pos": "ATC ๒", "ret": 2040}, {"name": "นายอัครวินท์ ตู้จินดา", "pos": "ATC ๒", "ret": 2043}, {"name": "นางศิริกานต์ อินทรเสน", "pos": "ATC ๒", "ret": 2045}, {"name": "นางรมนนิตย์ ศิริเพิ่มพูลธรรม", "pos": "ATC ๒", "ret": 2044}, {"name": "นายวศิน ดามพ์สุกรี", "pos": "ATC ๒", "ret": 2044}, {"name": "นายศิริชัย สิงห์ทอง", "pos": "ATC ๒", "ret": 2044}, {"name": "นายณฐวรรธ ไชเดโช", "pos": "ATC ๒", "ret": 2044}, {"name": "น.ส.ขวัญรัก วงษ์ศิริ", "pos": "ATC ๒", "ret": 2045}, {"name": "นายธนโชติ สุนทราเดชอังกูร", "pos": "ATC ๒", "ret": 2044}, {"name": "น.ส.กมลอร เรืองสอาด", "pos": "ATC ๒", "ret": 2046}, {"name": "นายธีรภัทร์ วงษ์เคี่ยม", "pos": "ผจก.", "ret": 2034}, {"name": "นางไพลิน พีระพันธ์", "pos": "ATC ๒", "ret": 2044}, {"name": "น.ส.ดวงพร พูนสังข์", "pos": "ATC ๒", "ret": 2046}, {"name": "นายชาร์ลส์ ลิ้มสุวัฒนกุล", "pos": "ATC ๒", "ret": 2044}, {"name": "น.ส.มยุรี อังธนากุล", "pos": "ATC ๒", "ret": 2042}, {"name": "น.ส.ณิชรัตน์ มะลิมาศ", "pos": "ATC ๒", "ret": 2043}, {"name": "ร.ต.ต.ชัย กนกนาค", "pos": "ATC ๒", "ret": 2047}, {"name": "นายณัฐพนธ์ ยูงศิริกาญจน์", "pos": "ATC ๒", "ret": 2041}, {"name": "ว่าที่ ร.ต.ธนิต แจ่มแจ้ง", "pos": "ATC ๑", "ret": 2046}, {"name": "นายจิรวุฒิ์ เหลืองทองคำ", "pos": "ATC ๑", "ret": 2045}, {"name": "น.ส.อิสรีย์ คำกลิ้ง", "pos": "ATC ๑", "ret": 2046}, {"name": "น.ส.ภัทร์พิชชา แสงทอง", "pos": "ATC ๒", "ret": 2046}, {"name": "น.ส.จงกล นากศรีงาม", "pos": "ATC ๒", "ret": 2047}, {"name": "นายภาณุพันธุ์ สิงหตระกูล", "pos": "ATC ๑", "ret": 2046}, {"name": "น.ส.จุฬารัตน์ ขันธิโชติ", "pos": "ATC ๑", "ret": 2049}, {"name": "น.ส.อาภากร วัฒนจัง", "pos": "ATC ๑", "ret": 2048}, {"name": "ร.ท.ภีศเดช เดชจรัสศรี", "pos": "ATC ๑", "ret": 2044}, {"name": "น.ส.เนตรชนก คุณโฑถม", "pos": "ATC ๑", "ret": 2045}, {"name": "น.ส.สุหัชชา ยอดจิ๋ว", "pos": "ATC ๑", "ret": 2048}, {"name": "น.ส.วรรณพร ชอบเจริญ", "pos": "ATC ๑", "ret": 2047}, {"name": "น.ส.ทิยาพรรณ เอื้ออภิสิทธิ์วงศ์", "pos": "ATC ๑", "ret": 2045}, {"name": "น.ส.พิจิตรา ทองเนียม", "pos": "ATC ๑", "ret": 2044}, {"name": "น.ส.อังสุมา จันทร์โยธี", "pos": "ATC ๑", "ret": 2047}, {"name": "นายธีรพล โกศัลวัฒน์", "pos": "ATC ๑", "ret": 2048}, {"name": "น.ส.ปัฐมาภรณ์ กรณ์ทอง", "pos": "ATC ๑", "ret": 2044}, {"name": "น.ส.คณพร ไทยพิริยะกุล", "pos": "ATC ๑", "ret": 2046}, {"name": "น.ส.กวิตา จิรภัทรดิลก", "pos": "ATC ๑", "ret": 2048}, {"name": "นายกันตภณ ลีละฉายากุล", "pos": "ATC ๑", "ret": 2051}, {"name": "น.ส.อชิรญาณ์ ภูริคุปต์", "pos": "ATC ๑", "ret": 2048}, {"name": "น.ส.รัตน์วดี ส่องแสงเจริญ", "pos": "ATC ๒", "ret": 2050}, {"name": "น.ส.ลภัส เพชรรัตน์", "pos": "ATC ๑", "ret": 2052}, {"name": "นายชยกฤต ไชยชนะ", "pos": "ATC ๒", "ret": 2051}, {"name": "นายทศพร กาญจนอุไรโรจน์", "pos": "ATC ๒", "ret": 2052}, {"name": "น.ส.กฤติญา ชัยเสนา", "pos": "ATC ๑", "ret": 2051}, {"name": "น.ส.ทัชชา รัตติธรรม", "pos": "ATC ๑", "ret": 2049}, {"name": "น.ส.วรรณวิสา เมฆฉาย", "pos": "ATC ๑", "ret": 2049}, {"name": "นางรัตตา ปัญจมหาเศรษฐี", "pos": "ATC ๒", "ret": 2051}, {"name": "น.ส.วาริส แก้วเอก", "pos": "ATC ๒", "ret": 2050}, {"name": "น.ส.ณหทัย เสนาะวรานนท์", "pos": "ATC ๑", "ret": 2052}, {"name": "น.ส.รัชวดี เลิศศักดิ์วานิช", "pos": "ATC ๑", "ret": 2051}, {"name": "นายกีรติ ปัญโญวัฒน์กูล", "pos": "ATC ๑", "ret": 2050}, {"name": "น.ส.นลินี เอื้อสมิทธ์", "pos": "ATC ๑", "ret": 2049}, {"name": "นายบัญชา ขิงหอม", "pos": "ATC ๑", "ret": 2053}, {"name": "น.ส.ณัฐจิรา มีริยะเกิด", "pos": "ATC ๑", "ret": 2051}, {"name": "น.ส.พิชญ์สินี เพียรเลิศ", "pos": "ATC ๑", "ret": 2051}, {"name": "นายภวัต เดชะไชย", "pos": "ATC ๑", "ret": 2050}, {"name": "นายกฤษฎิ์ธิเชษฐ์ เตมหิวงศ์", "pos": "ATC ๑", "ret": 2054}, {"name": "นายดนัย เลาหทวีโชค", "pos": "ATC ๑", "ret": 2054}, {"name": "น.ส.สิริยากร จันทหาร", "pos": "ATC ๑", "ret": 2053}, {"name": "น.ส.กนกอร เพริดพริ้ง", "pos": "ATC ๑", "ret": 2053}, {"name": "น.ส.วศินี วิโรจน์ยะกูล", "pos": "ATC ๑", "ret": 2053}, {"name": "นายก้องบุญ เสมพูล", "pos": "ATC ๑", "ret": 2053}, {"name": "นายวิทธวัช พวงสายใจ", "pos": "ATC ๑", "ret": 2052}, {"name": "น.ส.อรอนงค์ สุวลีรัตน์", "pos": "ATC ๑", "ret": 2052}, {"name": "นายชัยภัทร ลีนานุพันธุ์", "pos": "ATC ๑", "ret": 2051}, {"name": "นายธิษณะ เตือนธรรมรักษ์", "pos": "ATC ๑", "ret": 2051}, {"name": "นายธนกฤต บรรดาศักดิ์", "pos": "ATC ๑", "ret": 2050}, {"name": "น.ส.มุก ชัยวัฒนะ", "pos": "ATC ๑", "ret": 2051}, {"name": "นายสุริวงษ์ ใยสอน", "pos": "ATC ๑", "ret": 2053}, {"name": "น.ส.ปันนา ทาระพันธ์", "pos": "ATC ๑", "ret": 2054}, {"name": "นายสิทธา จันทรากา", "pos": "ATC ๑", "ret": 2053}, {"name": "นายมนัสวี สมเพชร", "pos": "ATC ๑", "ret": 2050}, {"name": "นายพีรนิธิ พุ่มบ้านเซ่า", "pos": "ATC ๑", "ret": 2053}, {"name": "นางชนัญชิดา พูลสวัสดิ์", "pos": "ATC ๑", "ret": 2054}, {"name": "นายจุมพล วัฒนะ", "pos": "ATC ๑", "ret": 2055}, {"name": "น.ส.รัชชา หาวิชา", "pos": "ATC ๑", "ret": 2053}, {"name": "นายกฤติน บัวสิน", "pos": "ATC ๑", "ret": 2054}, {"name": "นายพลสักก์ จิตระวัง", "pos": "ATC ๑", "ret": 2053}, {"name": "นายณัฐพล เลาวัฒนกุล", "pos": "ATC ๑", "ret": 2053}, {"name": "ว่าที่ ร.ต.พงศธร สายวงค์อินทร์", "pos": "ATC ๑", "ret": 2054}, {"name": "น.ส.มณฑิตา วรนุช", "pos": "ATC ๑", "ret": 2053}, {"name": "น.ส.ณัฐชยา แก้วแววนาม", "pos": "ATC ๑", "ret": 2054}, {"name": "น.ส.ภารดี เศตะพราหมณ์", "pos": "ATC ๑", "ret": 2053}, {"name": "นายเอกบุรุษ ปัญจมหาเศรษฐี", "pos": "ATC ๑", "ret": 2052}, {"name": "น.ส.กัลยรัตน์ นานาศรีรัตน์", "pos": "ATC ๑", "ret": 2053}, {"name": "นายศิวะ สายสังข์", "pos": "ATC ๑", "ret": 2053}, {"name": "น.ส.ธิติมา กล่อมจิตร์", "pos": "ATC ๑", "ret": 2052}, {"name": "น.ส.อภิชญา บุญปาน", "pos": "ATC ๑", "ret": 2055}, {"name": "นายสดายุ ชูวันพัด", "pos": "ATC ๑", "ret": 2053}, {"name": "น.ส.ธมลวรรณ รอตเสวก", "pos": "ATC ๑", "ret": 2054}, {"name": "นายภาสณัฐ ภาณุรักษ์สิริกุล", "pos": "ATC ๑", "ret": 2053}, {"name": "น.ส.ณภัทร ธีรสุวัฒน์", "pos": "ATC ๑", "ret": 2055}, {"name": "น.ส.ณัฐกฤตา ศรีพานิชกุลชัย", "pos": "ATC ๑", "ret": 2052}, {"name": "น.ส.รติมา ศิริสวัสดิ์ศิลป์", "pos": "ATC ๑", "ret": 2051}, {"name": "น.ส.ณีรนุช วุฒิประสิทธิผล", "pos": "ATC ๑", "ret": 2055}, {"name": "นายวิสสุต จัดพิบูลย์", "pos": "ATC ๑", "ret": 2052}, {"name": "นายวุฒ พุทธาวุฒิไกร", "pos": "ATC ๑", "ret": 2054}, {"name": "นายกฤษณะ ธิฉลาด", "pos": "ATC ๑", "ret": 2051}, {"name": "นายดำริ ตุลยวรเศรษฐ์", "pos": "ATC ๑", "ret": 2053}, {"name": "นายหิรัญ สิทธิประเสริฐผล", "pos": "ATC ๑", "ret": 2053}, {"name": "นายศิวกร สะสมสิน", "pos": "ATC ๑", "ret": 2053}, {"name": "น.ส.พัชริดา เจริญยิ่ง", "pos": "ATC ๑", "ret": 2054}, {"name": "น.ส.ณาญาฌ์ เหลืองสกุลพานิช", "pos": "ATC ๑", "ret": 2052}, {"name": "นายวศิน สังคีตานนท์", "pos": "ATC ๑", "ret": 2054}, {"name": "นายชวกร พิมสาร", "pos": "ATC ๑", "ret": 2052}, {"name": "นายชวพล ภู่ตันติกุล", "pos": "ATC ๑", "ret": 2052}, {"name": "นายธัญญพัทธ์ จันทร์กิตติชัย", "pos": "ATC ๑", "ret": 2054}, {"name": "น.ส.พิริยากร ตั้งอรุณสันติ", "pos": "ATC ๑", "ret": 2052}, {"name": "นายกรกฤต เกษมโกศลศรี", "pos": "ATC ๑", "ret": 2053}, {"name": "น.ส.ณัฏฐ์ธนิก ลู่สุวรรณเลิศ", "pos": "ATC ๑", "ret": 2053}, {"name": "นายเจษฎา วัฒนคุ้ม", "pos": "ATC ๑", "ret": 2053}, {"name": "นายเตชสฤษฏ์ ศิริครรชิตถาวร", "pos": "ATC ๑", "ret": 2052}, {"name": "น.ส.ธญพร งามสม", "pos": "ATC ๑", "ret": 2054}, {"name": "น.ส.วิลันดา วงค์เสถียร", "pos": "ATC ๑", "ret": 2056}, {"name": "น.ส.ธิชนัญ สุคนธปฏิภาค", "pos": "ATC ๑", "ret": 2056}], "sj": [{"name": "นายทรงพันธุ์ วรสิงห์", "pos": "ผจก.", "ret": 2058}, {"name": "นางฐนิชวรีณ์ จุลวิธูรฑ์", "pos": "ผจก.", "ret": 2028}, {"name": "นางณารินทร์ คุณะสารพันธ์", "pos": "ผจก.", "ret": 2028}, {"name": "นางภัทร์อาภา จันทร์คณาโชค", "pos": "ผจก.", "ret": 2027}, {"name": "นางบุษราคัม อมรรัตนโกศล", "pos": "ผจก.", "ret": 2029}, {"name": "น.ส.หัทยา ถิระวันธุ์", "pos": "ผจก.", "ret": 2028}, {"name": "นางศิริรัตน์ กิ่งบัวหลวง", "pos": "ผจก.", "ret": 2029}, {"name": "นางสรินท์ญากรณ์ วราเตชสิษฐ์", "pos": "ATC ๒", "ret": 2029}, {"name": "นางพรพรรณ เกาะแก้ว", "pos": "ผจก.", "ret": 2029}, {"name": "น.ส.ณฐทภัค อักษรกิจ", "pos": "ผจก.", "ret": 2028}, {"name": "นายอดิศร กิมขาว", "pos": "ผจก.", "ret": 2026}, {"name": "นางณภาภัชร์ ปนัดเศรณี", "pos": "ผจก.", "ret": 2028}, {"name": "นางนุจรี สัตยารักษ์", "pos": "ผจก.", "ret": 2031}, {"name": "นางคนึงนิต ชินอักษร", "pos": "ผจก.", "ret": 2029}, {"name": "นายธราธร งามมานะ", "pos": "ผจก.", "ret": 2030}, {"name": "นายปรีชาวุธ เฉลิมศิริ", "pos": "ผจก.", "ret": 2032}, {"name": "น.ส.ชุติมา นาคเกษม", "pos": "ผจก.", "ret": 2032}, {"name": "นายสุรินทร์ แย้มรักษา", "pos": "ผจก.", "ret": 2031}, {"name": "นายณัฐพงศ์ ศรียานุวัตรกุล", "pos": "ผจก.", "ret": 2029}, {"name": "นายกันณพงศ์ สติตรึก", "pos": "ผจก.", "ret": 2031}, {"name": "นายธีระ นุ่มอัมพรศิริ", "pos": "ผจก.", "ret": 2030}, {"name": "นางฉัตตรีภัทร อรุณวัชรพัชร์", "pos": "ผจก.", "ret": 2032}, {"name": "นายศรุต ศรีทอง", "pos": "ผจก.", "ret": 2030}, {"name": "น.ส.วรางค์รัตน์ แสงหิรัญ", "pos": "ATC ๒", "ret": 2029}, {"name": "น.ส.เกศรา เกษรบัว", "pos": "ผจก.", "ret": 2030}, {"name": "น.ส.สุดารัตน์ ม่วงศรเขียว", "pos": "ผจก.", "ret": 2029}, {"name": "น.ส.พิชามญชุ์ กิตติสุทธิ์", "pos": "ผจก.", "ret": 2028}, {"name": "น.ส.สายรุ้ง ศรีสุวรรณรัตน์", "pos": "ผจก.", "ret": 2030}, {"name": "นายจิรศักดิ์ อมรรัตนโกศล", "pos": "ผจก.", "ret": 2029}, {"name": "นายทฤษฎี บุญรุ่ง", "pos": "ผจก.", "ret": 2028}, {"name": "นายนิวัต กิ่งแก้ว", "pos": "ผจก.", "ret": 2028}, {"name": "นายไพบูลย์ โสภณเมฆดารา", "pos": "ผจก.", "ret": 2030}, {"name": "นายอรรถ สาริการินทร์", "pos": "ผจก.", "ret": 2027}, {"name": "นายทักษพงศ์ สุโข", "pos": "ผจก.", "ret": 2030}, {"name": "นางวลัยพรรณ สาริการินทร์", "pos": "ผจก.", "ret": 2031}, {"name": "น.ส.เจนนิสาข์ จังปีติทัศน์", "pos": "ผจก.", "ret": 2027}, {"name": "นายเมธี คำแหง", "pos": "ผจก.", "ret": 2028}, {"name": "น.ส.วราภรณ์ เทียนแสงอุทัย", "pos": "ผจก.", "ret": 2031}, {"name": "น.ส.ณัฐญา โทณานนท์", "pos": "ผจก.", "ret": 2031}, {"name": "นางสิรรุจี แย้มรักษา", "pos": "ผจก.", "ret": 2031}, {"name": "นางกัลยาพร ทั่งทรัพย์ศิริกุล", "pos": "ผจก.", "ret": 2026}, {"name": "นายวสิษฐ เอี่ยมสิทธิผล", "pos": "ผจก.", "ret": 2028}, {"name": "น.ส.ปนัดดา สิริสัณห์", "pos": "ผจก.", "ret": 2034}, {"name": "นางปัญจมา คงพูล", "pos": "ผจก.", "ret": 2029}, {"name": "นางเมทินี นุ่มดี", "pos": "ผจก.", "ret": 2033}, {"name": "นางปัณณิกา จิรัชยาธร", "pos": "ผจก.", "ret": 2032}, {"name": "นายธีรรัฐ แสงงาม", "pos": "ผจก.", "ret": 2032}, {"name": "นายพิเชษฐ อยู่ดี", "pos": "ผจก.", "ret": 2031}, {"name": "น.ส.ศิญาภัสร์ กิตติรพีสิทธิ์", "pos": "ผจก.", "ret": 2032}, {"name": "น.ส.รัชดาภรณ์ แพฟื้น", "pos": "ผจก.", "ret": 2035}, {"name": "นายขวัญชัย กุลลิ้มรัตน์ชัย", "pos": "ผจก.", "ret": 2034}, {"name": "นางวิไลลักษณ์ พุกสอน", "pos": "ATC ๒", "ret": 2034}, {"name": "น.ส.เสาวภาคย์ ใจสุกใส", "pos": "ผจก.", "ret": 2031}, {"name": "นายธันย์กมล รื่นจิตร์วรโชค", "pos": "ผจก.", "ret": 2031}, {"name": "น.ส.ภัควรินทร์ ไชยวรรณภัสร์", "pos": "ผจก.", "ret": 2030}, {"name": "นางอุบลวรรณ เซคูลิช", "pos": "ATC ๒", "ret": 2033}, {"name": "น.ส.ณญาดา ศังขจันทรานนท์", "pos": "ผจก.", "ret": 2032}, {"name": "นางปวีณา ประชากริช", "pos": "ผจก.", "ret": 2031}, {"name": "นางแสงอรุณ พึ่งตนไพศาล", "pos": "ผจก.", "ret": 2033}, {"name": "น.ส.จุฑาทิพย์ สุปัตติ", "pos": "ผจก.", "ret": 2035}, {"name": "นายวิศิษฎ์ แก้ววิเชียร", "pos": "ผจก.", "ret": 2032}, {"name": "น.ส.ชญาน์นันท์ เสนาะจิตร์", "pos": "ผจก.", "ret": 2035}, {"name": "น.ส.สุภัค รพีพันธ์", "pos": "ATC ๒", "ret": 2029}, {"name": "นางลลิตา หมวดเชียงคะ", "pos": "ATC ๒", "ret": 2032}, {"name": "น.ส.วันเฉลิม เนตรสว่าง", "pos": "ผจก.", "ret": 2034}, {"name": "น.ส.กีรดี ปริญญาจารย์", "pos": "ผจก.", "ret": 2034}, {"name": "น.ส.เสาวรส สัมมาพล", "pos": "ผจก.", "ret": 2033}, {"name": "น.ส.วิภารัตน์ พิพิธภัณฑ์", "pos": "ATC ๒", "ret": 2035}, {"name": "น.ส.สุดศิริ โชติกเสถียร", "pos": "ผจก.", "ret": 2034}, {"name": "นายธณพล ใจเทียมศักดิ์", "pos": "ผจก.", "ret": 2035}, {"name": "นายอนุสรณ์ เจริญธนา", "pos": "ผจก.", "ret": 2030}, {"name": "นางนพวรรณ กุลศิริเกษม", "pos": "ผจก.", "ret": 2036}, {"name": "นายอาสนะ ขำโตนด", "pos": "ผจก.", "ret": 2035}, {"name": "นายพิเรศ สุกใส", "pos": "ผจก.", "ret": 2033}, {"name": "นายนิกร ไทพาณิชย์", "pos": "ผจก.", "ret": 2035}, {"name": "น.ส.บุญตา บุญนำ", "pos": "ผจก.", "ret": 2033}, {"name": "น.ส.ภรภัทร รัตนะ", "pos": "ผจก.", "ret": 2035}, {"name": "น.ส.วาณี อับดุลมูบิล", "pos": "ผจก.", "ret": 2034}, {"name": "นายอัครัช คชสีห์", "pos": "ATC ๒", "ret": 2032}, {"name": "นายพงษ์ภัทร์ กิจโอภาส", "pos": "ผจก.", "ret": 2038}, {"name": "นายรังสรรค์ ชัยเจริญ", "pos": "ATC ๒", "ret": 2036}, {"name": "นางนงวรรณ ชำนาญกิจ", "pos": "ผจก.", "ret": 2038}, {"name": "นายณัฐพนธิ์ เลาหทวีโชค", "pos": "ผจก.", "ret": 2037}, {"name": "น.ส.วิจิตรา โสรินทร์", "pos": "ผจก.", "ret": 2038}, {"name": "น.ส.บุญธิดา พรรณรังษี", "pos": "ผจก.", "ret": 2037}, {"name": "น.ส.สุธีรา เลิศไพบูลย์ธนา", "pos": "ผจก.", "ret": 2040}, {"name": "น.ส.กฤติกา พวงสวัสดิ์", "pos": "ผจก.", "ret": 2039}, {"name": "น.ส.เพิ่มพร เกียรติผดุงกุล", "pos": "ผจก.", "ret": 2039}, {"name": "น.ส.ชนิษฎา ภัทรนิธิมา", "pos": "ผจก.", "ret": 2040}, {"name": "นายบุรินทร์ ศุภฤกษ์ไมตรี", "pos": "ผจก.", "ret": 2039}, {"name": "นายพงษ์เพชร วัฒนธาดากุล", "pos": "ATC ๒", "ret": 2035}, {"name": "นายธนกาญจน์ ชำนาญกิจ", "pos": "ผจก.", "ret": 2037}, {"name": "น.ส.วิเลขา ตั้งพิชิตพานิช", "pos": "ผจก.", "ret": 2037}, {"name": "นายสาธิต สุดสาย", "pos": "ผจก.", "ret": 2042}, {"name": "น.ส.พรรณยุพา แสนนามวงษ์", "pos": "ผจก.", "ret": 2039}, {"name": "นายคัมภีร์ วาสิกศิริ", "pos": "ผจก.", "ret": 2038}, {"name": "น.ส.พชร อึ้งอภินันท์", "pos": "ผจก.", "ret": 2039}, {"name": "นายณัฐพล หงส์ประภาส", "pos": "ผจก.", "ret": 2039}, {"name": "น.ส.ปิยพร วิเศษศิลปานนท์", "pos": "ผจก.", "ret": 2041}, {"name": "นายจิรศักดิ์ ขำศิริ", "pos": "ผจก.", "ret": 2036}, {"name": "นายเดชมนตรี เทพกุญชร", "pos": "ผจก.", "ret": 2033}, {"name": "นายวรวิทย์ ธนการพาณิช", "pos": "ผจก.", "ret": 2035}, {"name": "นายกิตติพงษ์ สาธิตภาณุวัฒน์", "pos": "ผจก.", "ret": 2039}, {"name": "นายวรศักดิ์ วรพิพัฒน์", "pos": "ผจก.", "ret": 2040}, {"name": "นายพรพล เจียมเจริญ", "pos": "ผจก.", "ret": 2040}, {"name": "นายพรเทพ โค้วประเสริฐสุข", "pos": "ผจก.", "ret": 2038}, {"name": "นายเจนวิทย์ บุญญะธนาสิทธิ์", "pos": "ผจก.", "ret": 2038}, {"name": "นายภคณิต ไชยาคำ", "pos": "ผจก.", "ret": 2039}, {"name": "นายต่อพงศ์ พิเชียรโสภณ", "pos": "ผจก.", "ret": 2042}, {"name": "นายอาชวินทร์ ม่วงศรีงาม", "pos": "ผจก.", "ret": 2041}, {"name": "น.ส.รชัสกมล กลับประทุม", "pos": "ผจก.", "ret": 2039}, {"name": "นายคมจักร รอนไพริน", "pos": "ATC ๒", "ret": 2038}, {"name": "น.ส.มนันยา วิศาลคุณา", "pos": "ผจก.", "ret": 2039}, {"name": "น.ส.พิมลพรรณ โพธิสุนทร", "pos": "ผจก.", "ret": 2041}, {"name": "น.ส.ศิวิมล สุขวิบูลย์", "pos": "ผจก.", "ret": 2042}, {"name": "นางพิมมาศ แสงงาม", "pos": "ATC ๒", "ret": 2042}, {"name": "น.ส.กรเพชร ทำประโยชน์", "pos": "ATC ๒", "ret": 2043}, {"name": "นายณัฐภูมิ โพธิสุนทร", "pos": "ATC ๒", "ret": 2042}, {"name": "น.ส.รัญชนก คุ้มพงษ์", "pos": "ATC ๒", "ret": 2041}, {"name": "นายอักษรา ดวงนภา", "pos": "ผจก.", "ret": 2043}, {"name": "น.ส.เพชรลดา รุ่นเจริญ", "pos": "ผจก.", "ret": 2043}, {"name": "ร.ต.อนุรัตน์ ชนะหุตานนท์", "pos": "ATC ๒", "ret": 2041}, {"name": "น.ส.วรารัตน์ โล่งจิตร", "pos": "ATC ๒", "ret": 2042}, {"name": "นายวิทวัส ฟูตระกูล", "pos": "ATC ๑", "ret": 2044}, {"name": "นายสมภพ ผดุงสันต์", "pos": "ATC ๒", "ret": 2041}, {"name": "น.ส.ธนัญญา ธรรมนิรันดร", "pos": "ATC ๒", "ret": 2044}, {"name": "นายณัฐพงษ์ จรัสพันธุ์กุล", "pos": "ATC ๒", "ret": 2044}, {"name": "น.ส.ปฐมาภรณ์ โตเต็มโชคชัยการ", "pos": "ATC ๒", "ret": 2043}, {"name": "นายวัชรพงษ์ ศิริปูน", "pos": "ATC ๒", "ret": 2042}, {"name": "น.ส.ไอรินทร์ สวัสดิ์วิชญ์", "pos": "ATC ๒", "ret": 2040}, {"name": "น.ส.มุกชฎา เบญจศรี", "pos": "ATC ๒", "ret": 2042}, {"name": "น.ส.สุพัชรา ไตรวิชา", "pos": "ATC ๒", "ret": 2044}, {"name": "นายธนพล สินสุขเศรษฐ์", "pos": "ATC ๒", "ret": 2044}, {"name": "น.ส.ศิเรมอร วุฒิชาติวานิช", "pos": "ATC ๒", "ret": 2043}, {"name": "นายวิทิตพันธุ์ เจริญขวัญ", "pos": "ATC ๒", "ret": 2043}, {"name": "น.ส.รัตนา วชิรวิศิษฏ์", "pos": "ATC ๒", "ret": 2040}, {"name": "น.ส.กฤตยา สิทธิวางค์กูล", "pos": "ATC ๒", "ret": 2043}, {"name": "นายสิทธิการณ์ อุ่นจิตต", "pos": "ATC ๒", "ret": 2040}, {"name": "น.ส.นลินี จักรกริชกูล", "pos": "ATC ๒", "ret": 2040}, {"name": "นายโฆษิต โนนศรี", "pos": "ATC ๒", "ret": 2041}, {"name": "ร.ต.นิธิศักดิ์ นันท์ชัย", "pos": "ATC ๒", "ret": 2043}, {"name": "น.ส.เมธายา ศรีวงศ์", "pos": "ATC ๒", "ret": 2042}, {"name": "นายเมธา สุธาพันธ์", "pos": "ATC ๒", "ret": 2045}, {"name": "นายสุเมธ อัศววิไลรัตน์", "pos": "ATC ๒", "ret": 2041}, {"name": "นายภัทรวิทย์ ไชยวรรณะ", "pos": "ATC ๒", "ret": 2045}, {"name": "น.ส.นิชาภา ทรงสิริอาชา", "pos": "ATC ๒", "ret": 2043}, {"name": "นายวิชญวัชร์ จิรอนันต์กุลเดช", "pos": "ATC ๒", "ret": 2043}, {"name": "น.ส.วรัสชญาน์ สิริวรรณวิชญ์", "pos": "ATC ๒", "ret": 2045}, {"name": "นายสิทธิโชค วงศ์ประยูร", "pos": "ATC ๒", "ret": 2044}, {"name": "นายชุติภัทร ภูมิพันธุ์", "pos": "ATC ๒", "ret": 2046}, {"name": "นายไตรภาค คงมานุสรณ์", "pos": "ATC ๒", "ret": 2044}, {"name": "น.ส.ปวลี บำรุงเมือง", "pos": "ATC ๒", "ret": 2044}, {"name": "นางนภาภัทร ม่วงศรีงาม", "pos": "ATC ๒", "ret": 2046}, {"name": "น.ส.วัสรา ตั้งตราสิทธิ์", "pos": "ATC ๒", "ret": 2043}, {"name": "น.ส.ฌาวี ดวงมณี", "pos": "ATC ๒", "ret": 2046}, {"name": "น.ส.อิมภัทรา หมอดี", "pos": "ATC ๑", "ret": 2046}, {"name": "น.ส.สิรีธร สุนทรวัฒน์", "pos": "ATC ๑", "ret": 2047}, {"name": "นายพงศ์วรธัช โตธนะรุ่งโรจน์", "pos": "ATC ๑", "ret": 2045}, {"name": "น.ส.รดาวัลย์ แสงกิตติกร", "pos": "ATC ๑", "ret": 2048}, {"name": "นายธนดล แสงกิตติกร", "pos": "ATC ๑", "ret": 2048}, {"name": "น.ส.สรัญญา อุดมศิลป์", "pos": "ATC ๑", "ret": 2047}, {"name": "นายชัชประวิทย์ โพธยานุวัตร", "pos": "ATC ๑", "ret": 2045}, {"name": "นางอริศรา ธนานันท์", "pos": "ATC ๑", "ret": 2048}, {"name": "น.ส.มาณิตา สุวรรณกูฏ", "pos": "ATC ๑", "ret": 2049}, {"name": "น.ส.ญาดา นีระเสน", "pos": "ATC ๑", "ret": 2048}, {"name": "น.ส.กาญจนา กาญจนเพ็ญ", "pos": "ATC ๑", "ret": 2047}, {"name": "น.ส.กัญญาณัฐ พนมรัตน์", "pos": "ATC ๑", "ret": 2049}, {"name": "น.ส.รัชกานต์ กนะกาศัย", "pos": "ATC ๑", "ret": 2051}, {"name": "น.ส.วิราอร อินทร์แก้ว", "pos": "ATC ๑", "ret": 2050}, {"name": "น.ส.ณัฐชลัยย์ ซื่อสัตตบงกช", "pos": "ATC ๑", "ret": 2048}, {"name": "น.ส.วรรณวิจิตร สุจริตพานิช", "pos": "ATC ๑", "ret": 2051}, {"name": "น.ส.พรทิพย์ ทาทอง", "pos": "ATC ๑", "ret": 2052}, {"name": "นายนฤเบศ ชัยพันธุ์", "pos": "ATC ๑", "ret": 2052}, {"name": "น.ส.ศิรดา เจริญพันทวีสิน", "pos": "ATC ๑", "ret": 2052}, {"name": "นายไชยวิชฌ์ สีชาลี", "pos": "ATC ๑", "ret": 2051}, {"name": "นายธนพล เด็ดดวง", "pos": "ATC ๑", "ret": 2048}, {"name": "นายกฤติน อุนคานนท์", "pos": "ATC ๑", "ret": 2051}, {"name": "นายชญานิน อิ่มทวีกุล", "pos": "ATC ๑", "ret": 2050}, {"name": "น.ส.พิชญา พันธุ์อุบล", "pos": "ATC ๑", "ret": 2052}, {"name": "น.ส.อนันตญา เหลืองอมรสิริ", "pos": "ATC ๑", "ret": 2052}, {"name": "น.ส.ปวีนันท์ วงศ์ศรีวัฒนกุล", "pos": "ATC ๑", "ret": 2050}, {"name": "น.ส.อริสรา ใจมั่น", "pos": "ATC ๑", "ret": 2048}, {"name": "นายสรณ์ธนพ ปันจัยสีห์", "pos": "ATC ๑", "ret": 2051}, {"name": "น.ส.นันทวรรณ สีสมยา", "pos": "ATC ๑", "ret": 2051}, {"name": "นายภัสกร สุจริตพานิช", "pos": "ATC ๑", "ret": 2048}, {"name": "นายปาริต วรศรี", "pos": "ATC ๑", "ret": 2049}, {"name": "นายพาทิศ บรรณโศภิษฐ์", "pos": "ATC ๑", "ret": 2051}, {"name": "น.ส.ปัทมาพร ริ้วประสงค์", "pos": "ATC ๑", "ret": 2053}, {"name": "น.ส.อรสิรีญาณ์ รอดเดช", "pos": "ATC ๑", "ret": 2053}, {"name": "น.ส.สิรีธร สุขทอง", "pos": "ATC ๑", "ret": 2052}, {"name": "นายภานุพงษ์ น้อยแนม", "pos": "ATC ๑", "ret": 2053}, {"name": "น.ส.กฤตยา คงสัมมา", "pos": "ATC ๑", "ret": 2050}, {"name": "นายสัภยา บุญทรัพย์", "pos": "ATC ๑", "ret": 2053}, {"name": "นายกิติคุณ ภาคอุทัย", "pos": "ATC ๑", "ret": 2050}, {"name": "นายธิติวุฒิ พิเชษฐนาวิน", "pos": "ATC ๑", "ret": 2053}, {"name": "น.ส.อุบลวรรณ คงเกลี้ยง", "pos": "ATC ๑", "ret": 2053}, {"name": "น.ส.พาขวัญ คชเสนี", "pos": "ATC ๑", "ret": 2053}], "sb": [{"name": "น.ส.ชมภัทสร หล้าวงษา", "pos": "ผจก.", "ret": 2028}, {"name": "นางบุญจิรา ศรีทอง", "pos": "ผจก.", "ret": 2029}, {"name": "นายวัฒนชัย จิตรอบอารีย์", "pos": "ผจก.", "ret": 2033}, {"name": "นางสุดาทิพย์ กรป้องกัน", "pos": "ผจก.", "ret": 2029}, {"name": "นายอำนาจ คชพลายุกต์", "pos": "ATC ๒", "ret": 2035}, {"name": "น.ส.ปาริชาติ กุญชร", "pos": "ATC ๒", "ret": 2031}, {"name": "นางวราภรณ์ เมฆธารา", "pos": "ผจก.", "ret": 2031}, {"name": "นายอรรณพ แพงหนู", "pos": "ผจก.", "ret": 2031}, {"name": "นางมาลินี เกษมุติ", "pos": "ผจก.", "ret": 2034}, {"name": "นายอิงครักษ์ จ่ายวานิช", "pos": "ผจก.", "ret": 2034}, {"name": "นางนิศาชล เมฆกระจ่าง", "pos": "ผจก.", "ret": 2031}, {"name": "นางกุณฑี ช่วยวงศ์ญาติ", "pos": "ผจก.", "ret": 2033}, {"name": "นางกมลวรรณ พลสมัคร", "pos": "ผจก.", "ret": 2030}, {"name": "น.ส.จินดามณี ศรีทอง", "pos": "ผจก.", "ret": 2031}, {"name": "นางศิวาพร ลิ้มทวีวงค์", "pos": "ผจก.", "ret": 2031}, {"name": "นายชววิทย์ อินทรวิชัย", "pos": "ผจก.", "ret": 2032}, {"name": "นายสำเนา ห้วยหงษ์ทอง", "pos": "ผจก.", "ret": 2030}, {"name": "น.ส.ปิยฉัตร พจน์กระจ่าง", "pos": "ผจก.", "ret": 2034}, {"name": "นายฐิตพงษ์ จุรีกานนท์", "pos": "ผจก.", "ret": 2037}, {"name": "นางจิรวรรณ ศิริชีพชัยยันต์", "pos": "ผจก.", "ret": 2039}, {"name": "น.ส.รุจินันท์ จรูญลักษณ์", "pos": "ผจก.", "ret": 2035}, {"name": "นายวิชาญ แพทย์เพียร", "pos": "ATC ๒", "ret": 2035}, {"name": "นายกิตติพันธ์ นิวัฒน์บรรหาร", "pos": "ผจก.", "ret": 2037}, {"name": "น.ส.อัญญา มัณฑนาพงศ์", "pos": "ผจก.", "ret": 2040}, {"name": "น.ส.กนกพร ภูมิวัฒน์", "pos": "ผจก.", "ret": 2038}, {"name": "นายศรัณย์ จิรบุญเรือง", "pos": "ATC ๒", "ret": 2041}, {"name": "น.ส.พัณณ์ณิญา สรรพประเสริฐ", "pos": "ATC ๒", "ret": 2040}, {"name": "นายกรกต สิทธิธนกุล", "pos": "ผจก.", "ret": 2042}, {"name": "น.ส.วรรัตน์ ลาวัณยกุล", "pos": "ATC ๒", "ret": 2042}, {"name": "นายเวชยันต์ อิ่มอารมณ์", "pos": "ผจก.", "ret": 2043}, {"name": "นายศุภสิทธิ์ พรหมณี", "pos": "ATC ๒", "ret": 2040}, {"name": "นายชลมารค เดือนแจ่ม", "pos": "ผจก.", "ret": 2042}, {"name": "นายมาด๊าด หีมมิหน๊ะ", "pos": "ATC ๒", "ret": 2042}, {"name": "นายริทธิรนท์ ธรรมพิทักษ์จิต", "pos": "ATC ๒", "ret": 2042}, {"name": "น.ส.มณินทรา สุขประเสริฐ", "pos": "ATC ๒", "ret": 2043}, {"name": "นายวุฒิพงศ์ รอดปัญญา", "pos": "ATC ๒", "ret": 2047}, {"name": "น.ส.ชนิตา มีลาภ", "pos": "ATC ๒", "ret": 2042}, {"name": "นายมนเทพ แผ้วพลสง", "pos": "ATC ๒", "ret": 2046}, {"name": "น.ส.ภาไพลิน มานวิศิษฎ์", "pos": "ATC ๒", "ret": 2047}, {"name": "น.ส.ธนพร พุทธาธร", "pos": "ATC ๒", "ret": 2047}, {"name": "นายอิทธิเดช ศศิพยุงศักดิ์", "pos": "ATC ๒", "ret": 2049}, {"name": "น.ส.ทิฆัมพร นวลเสน่ห์", "pos": "ATC ๒", "ret": 2049}, {"name": "นายศุภรัตน์ พงศ์พันธุ์", "pos": "ATC ๑", "ret": 2047}, {"name": "น.ส.สุภัทรา ขันธพร", "pos": "ATC ๒", "ret": 2050}, {"name": "น.ส.สุลาวรรณ พัศดุรักษา", "pos": "ATC ๒", "ret": 2051}, {"name": "นายธีรพัฒน์ หอมทอง", "pos": "ATC ๒", "ret": 2050}, {"name": "น.ส.บุณยาพร ไวทยะพัธน์", "pos": "ATC ๒", "ret": 2048}, {"name": "ร.ท.เอกวริษฐ์ กัลยาณมิตร", "pos": "ATC ๑", "ret": 2048}, {"name": "นายปริญ ปิ่นมณี", "pos": "ATC ๒", "ret": 2052}, {"name": "น.ส.พิมพ์ณดา แต้ประจิตร", "pos": "ATC ๒", "ret": 2050}, {"name": "น.ส.สโรชา สายวงศ์", "pos": "ATC ๒", "ret": 2050}, {"name": "น.ส.พนินทรา โชคประเสริฐถาวร", "pos": "ATC ๒", "ret": 2052}, {"name": "น.ส.พรไพลิน บัวคำโคก", "pos": "ATC ๒", "ret": 2054}, {"name": "น.ส.ภัทรานิษฐ ธัญญาผล", "pos": "ATC ๒", "ret": 2052}, {"name": "น.ส.กิตติกา อร่ามรัตนพันธุ์", "pos": "ATC ๒", "ret": 2053}, {"name": "นายเปรมินทร์ โยธาปาน", "pos": "ATC ๒", "ret": 2052}, {"name": "นายกษิดิศ วงศ์รักไทย", "pos": "ATC ๒", "ret": 2054}, {"name": "น.ส.ณิชชาวีณ์ จิระศรินรัตน์", "pos": "ATC ๒", "ret": 2051}, {"name": "นายธนพัฒน์ พิทักษ์จินดา", "pos": "ATC ๒", "ret": 2052}, {"name": "น.ส.วรันธร ผดุงศิลป์", "pos": "ATC ๒", "ret": 2051}, {"name": "น.ส.ฏิมาพร เอื้อประชานนท์", "pos": "ATC ๒", "ret": 2055}, {"name": "นายณัฐวุฒิ พูลผล", "pos": "ATC ๒", "ret": 2055}, {"name": "นายณิชพงศ์ บุราไกร", "pos": "ATC ๒", "ret": 2053}, {"name": "นายวรภัทร สายอุบล", "pos": "ATC ๒", "ret": 2056}, {"name": "นายปุณณวิช ศรีอุทก", "pos": "ATC ๑", "ret": 2055}, {"name": "น.ส.ธันฏวรรณ สิงหการ", "pos": "ATC ๑", "ret": 2051}, {"name": "น.ส.วิชชุดา นิจพันธ์", "pos": "ATC ๑", "ret": 2051}, {"name": "น.ส.ชัชมณฑ์ อาชวพงศ์พาณิชย์", "pos": "ATC ๑", "ret": 2057}, {"name": "นายชลธนัชญ์ ภิรมย์ภาคย์", "pos": "ATC ๑", "ret": 2057}, {"name": "น.ส.ศศุณีย์ บูรณสิงคิ์", "pos": "ATC ๑", "ret": 2057}, {"name": "น.ส.มุกดารินทร์ จรูญธรรม", "pos": "ATC ๑", "ret": 2053}, {"name": "นายเอกวัฒน์ ชาญภิญโญ", "pos": "ATC ๑", "ret": 2054}], "sn": [], "sp": [{"name": "นางเพ็ญศรี พงศ์ศรุต", "pos": "ผจก.", "ret": 2058}, {"name": "นายภาณุสิฏฐ์ กาลจักร", "pos": "ผจก.", "ret": 2058}, {"name": "จ.ท.อภิสิทธิ์ ยิ้มเจริญ", "pos": "ผจก.", "ret": 2058}, {"name": "นางปัทมา โลหนันทน์", "pos": "ผจก.", "ret": 2029}, {"name": "นางศิริวรรณ การะคุณ", "pos": "ผจก.", "ret": 2032}, {"name": "พ.อ.อ.นิพัตร มารุ่งเรือง", "pos": "ผจก.", "ret": 2026}, {"name": "น.ส.จิตอารีย์ ตันอารีย์", "pos": "ผจก.", "ret": 2031}, {"name": "นางมลดา กาลจักร", "pos": "ผจก.", "ret": 2034}, {"name": "จ.อ.เพียง ใจเสงี่ยม", "pos": "ผจก.", "ret": 2032}, {"name": "น.ส.นิภาภรณ์ แต้สุวรรณ", "pos": "ผจก.", "ret": 2035}, {"name": "นางยูสนีต้า รักมิตร", "pos": "ATC ๓", "ret": 2034}, {"name": "นายศตพล รักมิตร", "pos": "ผจก.", "ret": 2033}, {"name": "นางสุธาสินี ผลิโกมล", "pos": "ATC ๓", "ret": 2032}, {"name": "น.ส.สุวิมล ตัณฑเวส", "pos": "ATC ๓", "ret": 2034}, {"name": "จ.อ.ศิวาเรศ ฉัตรกุล ณ อยุธยา", "pos": "ผจก.", "ret": 2035}, {"name": "นายมรรค ศรวัต", "pos": "ผจก.", "ret": 2038}, {"name": "นางศิริพร อ้นโต", "pos": "ATC ๓", "ret": 2038}, {"name": "นายชวาลพจน์ สมิตชาติ", "pos": "ATC ๓", "ret": 2036}, {"name": "นายสุรนาท บัลนาลังก์", "pos": "ผจก.", "ret": 2040}, {"name": "น.ส.อภิวรรณ เขียวชะอุ่ม", "pos": "ATC ๓", "ret": 2043}, {"name": "น.ส.ธนวดี เหลืองทองคำ", "pos": "ATC ๒", "ret": 2041}, {"name": "นายปราโมทย์ จิรกัญจนะ", "pos": "ATC ๓", "ret": 2041}, {"name": "นายธีศิษฏ์ ใยสุหร่าย", "pos": "ATC ๓", "ret": 2042}, {"name": "นายรัชพงศ์ ณ สงขลา", "pos": "ATC ๓", "ret": 2043}, {"name": "นายก่อเกียรติ เกิดปากแพรก", "pos": "ATC ๓", "ret": 2042}, {"name": "นายณัฐกมล โกมลวานิช", "pos": "ATC ๓", "ret": 2043}, {"name": "นายรุ่งวิทย์ ไกรเทพ", "pos": "ATC ๓", "ret": 2043}, {"name": "น.ส.พลอยบุศ แสงหิรัญ", "pos": "ATC ๓", "ret": 2046}, {"name": "นายพุทธินันต์ จันทะโชติ", "pos": "ATC ๓", "ret": 2046}, {"name": "นางพิณผกา ใจสม เทียร์นีย์", "pos": "ATC ๓", "ret": 2058}, {"name": "น.ส.รวีรัศมิ์ จิระวารี", "pos": "ATC ๓", "ret": 2045}, {"name": "น.ส.ศิริเทพ พิเชียรโสภณ", "pos": "ATC ๓", "ret": 2046}, {"name": "น.ส.สิริอร ธารนพ", "pos": "ATC ๓", "ret": 2044}, {"name": "นายภัทรพงศ์ วรรณเสน", "pos": "ATC ๓", "ret": 2049}, {"name": "นายรัชพงศ์ ภักดี", "pos": "ATC ๓", "ret": 2049}, {"name": "นายพงศธร อริยฉัตรกุล", "pos": "ATC ๒", "ret": 2049}, {"name": "น.ส.คาริชมา จันทร์แพทย์รักษ์", "pos": "ATC ๒", "ret": 2050}, {"name": "น.ส.เพียรเพ็ญ บริพันธุ์", "pos": "ATC ๒", "ret": 2049}, {"name": "น.ส.ณัฏฐณิชา มีกรสม", "pos": "ATC ๒", "ret": 2049}, {"name": "นายทรงพล นิมิตรวานิช", "pos": "ATC ๒", "ret": 2048}, {"name": "น.ส.กุลกันยา ไตรสิงห์", "pos": "ATC ๒", "ret": 2046}, {"name": "น.ส.พีรพรรณ ประทีป ณ ถลาง", "pos": "ATC ๒", "ret": 2049}, {"name": "นายวริศ ชินกุลประสาน", "pos": "ATC ๒", "ret": 2049}, {"name": "นายกิตติศักดิ์ กิตติเวทางค์", "pos": "ATC ๒", "ret": 2046}, {"name": "นายพารัฐ บุลศิริ", "pos": "ATC ๒", "ret": 2047}, {"name": "นายวิทวัส สมควรดี", "pos": "ATC ๒", "ret": 2047}, {"name": "น.ส.วริษา เอี่ยมรักษา", "pos": "ATC ๒", "ret": 2049}, {"name": "นายมารวย ยงกัลยาณกุล", "pos": "ATC ๒", "ret": 2047}, {"name": "น.ส.ภาระวี วิบูลย์", "pos": "ATC ๒", "ret": 2048}, {"name": "นายพงศธร งามศรี", "pos": "ATC ๒", "ret": 2050}, {"name": "นายคณาวุฒิ ครองรักษา", "pos": "ATC ๒", "ret": 2049}, {"name": "น.ส.ศิริกาญจน์ อริยฉัตรกุล", "pos": "ATC ๒", "ret": 2047}, {"name": "น.ส.ศลิษา หนูช่วย", "pos": "ATC ๒", "ret": 2050}, {"name": "นายภัคพล เฉวียงหงษ์", "pos": "ATC ๒", "ret": 2050}, {"name": "น.ส.นันทิยา พรชัยจันทร์เพ็ญ", "pos": "ATC ๒", "ret": 2051}, {"name": "นายนภัส เพิ่มไทย", "pos": "ATC ๒", "ret": 2051}, {"name": "น.ส.ธันย์ชนก พูลสวัสดิ์", "pos": "ATC ๒", "ret": 2050}, {"name": "น.ส.โสมลดา บำรุงพงศ์", "pos": "ATC ๒", "ret": 2047}, {"name": "นายนฤนาท พงศ์พยัคฆ์", "pos": "ATC ๒", "ret": 2050}, {"name": "น.ส.กษมา เหล่าเส็น", "pos": "ATC ๒", "ret": 2050}, {"name": "นายนฤบดี สิริธุวานนท์", "pos": "ATC ๒", "ret": 2048}, {"name": "นายประวิตร์ พันตะกรุด", "pos": "ATC ๒", "ret": 2050}, {"name": "น.ส.ณัฐกมล คุ้มทองคำ", "pos": "ATC ๒", "ret": 2049}, {"name": "นายธาวิน มีชำนาญ", "pos": "ATC ๒", "ret": 2049}, {"name": "นายณัฐวิท โพธิประสาท", "pos": "ATC ๒", "ret": 2053}, {"name": "นายสรธัญ สุมานิตย์", "pos": "ATC ๒", "ret": 2052}, {"name": "นายชนินทร์ บำรุงรัตน์", "pos": "ATC ๒", "ret": 2052}, {"name": "นายภัทรพิสิฐ ฉันทาฐิติวัฒน์", "pos": "ATC ๒", "ret": 2052}, {"name": "นายณัฎฐ์ ตันติชูเกียรติกุล", "pos": "ATC ๒", "ret": 2054}, {"name": "นายธีรสิทธ แสงสายัณห์", "pos": "ATC ๑", "ret": 2056}, {"name": "นายศักรินทร์ พรชัยรุ่งเรือง", "pos": "ATC ๑", "ret": 2054}, {"name": "น.ส.พิมษลี ทัพพะรกร", "pos": "ATC ๑", "ret": 2056}, {"name": "น.ส.กัลยารัตน์ ทุนอ่อง", "pos": "ATC ๑", "ret": 2055}, {"name": "นายธนโชติ โสภานนท์", "pos": "ATC ๑", "ret": 2057}, {"name": "นายธนวัต เพิ่มศิริพันธุ์", "pos": "ATC ๑", "ret": 2053}, {"name": "นายหัสสนัย ศรีสวัสดิ์", "pos": "ATC ๑", "ret": 2057}, {"name": "น.ส.พิมพัชฌา กาฬแก้ว", "pos": "ATC ๑", "ret": 2056}], "sy": [], "sr": [{"name": "นายโกวิฬาร ทีปิรัช", "pos": "ผจก.", "ret": 2030}, {"name": "น.ส.ปิยวรรณ นิลอุบล", "pos": "ผจก.", "ret": 2034}, {"name": "น.ส.สมจินตนา สุทธิชาติ", "pos": "ผจก.", "ret": 2029}, {"name": "นางจีรภา มีพูล", "pos": "ผจก.", "ret": 2032}, {"name": "นางน้ำทิพย์ ชูสิทธิ์", "pos": "ผจก.", "ret": 2032}, {"name": "น.ส.จุฑามาส สันโลหะ", "pos": "ผจก.", "ret": 2034}, {"name": "นายปิติ อุ่นทรัพย์", "pos": "ผจก.", "ret": 2028}, {"name": "น.ส.อนินทิกา สัมฤทธิ์", "pos": "ผจก.", "ret": 2036}, {"name": "นางรตพร ฉิมเรศ", "pos": "ผจก.", "ret": 2037}, {"name": "นายภูดิษ ดิษฐปาน", "pos": "ATC ๓", "ret": 2041}, {"name": "น.ส.พัชนิภา ศิริปโชติ", "pos": "ATC ๓", "ret": 2040}, {"name": "นายวรวุฒิ นาคฤทธิ์", "pos": "ATC ๓", "ret": 2041}, {"name": "นายชนินทร์ โชติรุ่งโรจน์", "pos": "ATC ๓", "ret": 2042}, {"name": "นายอติชาต ซอสูงเนิน", "pos": "ATC ๓", "ret": 2045}, {"name": "น.ส.ฐิรัตน์ สมบูรณ์สุข", "pos": "ATC ๓", "ret": 2047}, {"name": "นายปาณสาร ภูครองหิน", "pos": "ATC ๓", "ret": 2046}, {"name": "นายดิฐคุณ ศรีไตรรัตน์", "pos": "ATC ๓", "ret": 2046}, {"name": "นายศรายุ ดิษฐปาน", "pos": "ATC ๓", "ret": 2044}, {"name": "น.ส.ขวัญธีรา แพรดำ", "pos": "ATC ๓", "ret": 2045}, {"name": "นายสืบสกุล วัชโรทัย", "pos": "ATC ๓", "ret": 2044}, {"name": "น.ส.วัฒน์ธิดา ไชยเทพ", "pos": "ATC ๓", "ret": 2048}, {"name": "นายวรวงศ์ ผุดให้", "pos": "ATC ๓", "ret": 2044}, {"name": "นายธีรศานต์ ฤทธิ์สูงเนิน", "pos": "ATC ๓", "ret": 2050}, {"name": "นายอาบบุญ คำทิพย์", "pos": "ATC ๓", "ret": 2048}, {"name": "นายณัฐนันท์ ผ่องอำไพ", "pos": "ATC ๓", "ret": 2048}, {"name": "นายชยพล ศรีวิลาศ", "pos": "ATC ๓", "ret": 2046}, {"name": "น.ส.สุพัตรา เมตะศิริ", "pos": "ATC ๓", "ret": 2046}, {"name": "น.ส.ภัทรภร ณ ลำพูน", "pos": "ATC ๓", "ret": 2049}, {"name": "น.ส.ศิรญา บัวผ่อง", "pos": "ATC ๓", "ret": 2048}, {"name": "น.ส.ศรีสุนันท์ บุญญานุภาพพันธ์", "pos": "ATC ๓", "ret": 2048}, {"name": "น.ส.ณุพัณณา หนองบัว", "pos": "ATC ๒", "ret": 2051}, {"name": "น.ส.ภารวี ขิงทอง", "pos": "ATC ๓", "ret": 2049}, {"name": "น.ส.ปกฉัตร กลับน่วม", "pos": "ATC ๓", "ret": 2050}, {"name": "น.ส.อุดมพร อุดมฤทธาวุธ", "pos": "ATC ๓", "ret": 2050}, {"name": "น.ส.จิรัชยา พวงดี", "pos": "ATC ๒", "ret": 2049}, {"name": "นายพิพัฒน์ ท้าววิบูลย์", "pos": "ATC ๑", "ret": 2054}, {"name": "นางภคกุล ดิษฐปาน", "pos": "ATC ๑", "ret": 2052}, {"name": "น.ส.ญณากร สกุลแก้ว", "pos": "ATC ๑", "ret": 2053}, {"name": "น.ส.ปิยธิดา โมรา", "pos": "ATC ๑", "ret": 2051}, {"name": "น.ส.ธนิกา ยอดหงษ์", "pos": "ATC ๑", "ret": 2054}, {"name": "น.ส.สรัญญา แก้วกัญญาติ", "pos": "ATC ๑", "ret": 2053}, {"name": "นายนภพล ศรีทองแท้", "pos": "ATC ๑", "ret": 2053}, {"name": "นายเชาวัต มากมี", "pos": "ATC ๑", "ret": 2054}, {"name": "นายก้องกิจ พุมมา", "pos": "ATC ๑", "ret": 2055}, {"name": "น.ส.บุญญิศา ชูสุวรรณ", "pos": "ATC ๑", "ret": 2055}, {"name": "นายพงษ์พัฒน์ เค้าอนุรักษ์", "pos": "ATC ๑", "ret": 2056}, {"name": "นายสินิลทร รางวัลหลาย", "pos": "ATC ๑", "ret": 2054}], "sc": [{"name": "นายสุริยา ดีหมัด", "pos": "ผจก.", "ret": 2058}, {"name": "นางละเอียด ชนะดี", "pos": "ผจก.", "ret": 2058}, {"name": "นางประทุมพร หาอุปละ", "pos": "ผจก.", "ret": 2027}, {"name": "นายพัลลภ กวีกุล", "pos": "ผจก.", "ret": 2027}, {"name": "นายวิบูลย์ นิจรมย์", "pos": "ผจก.", "ret": 2027}, {"name": "นางชยา รักยงค์", "pos": "ผจก.", "ret": 2029}, {"name": "นายสุขสันต์ เจริญสุข", "pos": "ผจก.", "ret": 2028}, {"name": "นางจิราพร ดอกคำ", "pos": "ผจก.", "ret": 2033}, {"name": "นายพันธุ์เทพ ชนะดี", "pos": "ผจก.", "ret": 2034}, {"name": "นายวิษณุ เลี้ยงดีศรีสุข", "pos": "ผจก.", "ret": 2033}, {"name": "พ.จ.ต.ทรงศักดิ์ ภู่ประเสริฐ", "pos": "ATC ๓", "ret": 2029}, {"name": "นายประเสริฐ ศรีสุขสวัสดิ์", "pos": "ผจก.", "ret": 2032}, {"name": "นายสายยัญ กินขุนทด", "pos": "ผจก.", "ret": 2031}, {"name": "นายวิโรจน์ งามดีแท้", "pos": "ผจก.", "ret": 2034}, {"name": "นายสุวรรณชัย โคตรรัตน์", "pos": "ผจก.", "ret": 2032}, {"name": "น.ส.พรรณมนชพร อักษร", "pos": "ATC ๓", "ret": 2034}, {"name": "น.ส.กรกานต์ วรรณโกมล", "pos": "ATC ๓", "ret": 2030}, {"name": "น.ส.วรวิมล วริสาร", "pos": "ผจก.", "ret": 2032}, {"name": "นายเฉลิมพล นันทมงคล", "pos": "ATC ๓", "ret": 2033}, {"name": "นางนิตยา นันทมงคล", "pos": "ATC ๓", "ret": 2032}, {"name": "นายเทพรักษ์ เยียรยงค์", "pos": "ATC ๓", "ret": 2030}, {"name": "นางอมรรัตน์ จุลโพธิ์", "pos": "ผจก.", "ret": 2027}, {"name": "นางชิตพันธุ์ พาที", "pos": "ATC ๓", "ret": 2035}, {"name": "นายบุณยรักษ์ นิยมวัน", "pos": "ATC ๓", "ret": 2034}, {"name": "นายธนาวัฒน์ วัฒนานันท์", "pos": "ผจก.", "ret": 2038}, {"name": "น.ส.พัชรา เกาตระกูล", "pos": "ATC ๓", "ret": 2037}, {"name": "นายยศจรัส สังฆอนันต์", "pos": "ATC ๓", "ret": 2036}, {"name": "นางภาชิตา แพทย์เจริญ", "pos": "ATC ๓", "ret": 2039}, {"name": "นายไตรทศ กลิ่นอุทัย", "pos": "ATC ๓", "ret": 2037}, {"name": "นายสืบสกุล วัชรินทร์ยานนท์", "pos": "ATC ๓", "ret": 2036}, {"name": "นางไพลิน ปัญญากรณ์", "pos": "ATC ๓", "ret": 2035}, {"name": "นายวฤช ศรีศิวะเศรษฐ์", "pos": "ผจก.", "ret": 2040}, {"name": "น.ส.ศศิ เปรมปรีดิ์", "pos": "ATC ๓", "ret": 2037}, {"name": "นายสุพัฒน์ สวรรณยานุกิจ", "pos": "ATC ๓", "ret": 2039}, {"name": "นายชัยนรินทร์ ไวพยาบาล", "pos": "ATC ๓", "ret": 2040}, {"name": "นายณัทชัย อินกองงาม", "pos": "ATC ๓", "ret": 2040}, {"name": "นางนาถชนก คำโพธิ์", "pos": "ATC ๓", "ret": 2041}, {"name": "ร.ต.ธนวรรษ วิชาศิลป์", "pos": "ATC ๓", "ret": 2044}, {"name": "น.ส.ณัฏฐวรรณ ธีระแนว", "pos": "ATC ๓", "ret": 2040}, {"name": "น.ส.เกษสุดา ไพสินสมบูรณ์", "pos": "ATC ๒", "ret": 2046}, {"name": "น.ส.ณัฏฐวรรณ ทรงโฉม", "pos": "ATC ๒", "ret": 2049}, {"name": "นายมนัสวี สุขพืชกิจ", "pos": "ATC ๒", "ret": 2049}, {"name": "นายภวิศ สุขารมย์", "pos": "ATC ๒", "ret": 2050}, {"name": "น.ส.พันธ์ณภัทร โสภา", "pos": "ATC ๒", "ret": 2048}, {"name": "น.ส.วราลี บรรพเชิด", "pos": "ATC ๒", "ret": 2048}, {"name": "น.ส.อภิชญา เลิศคาลี", "pos": "ATC ๒", "ret": 2051}, {"name": "นายชลริศ บุญทาคำ", "pos": "ATC ๒", "ret": 2054}, {"name": "นายอภิวัฒน์ สุธีรภิญโญ", "pos": "ATC ๒", "ret": 2054}, {"name": "นายนุชา มนตรี", "pos": "ATC ๑", "ret": 2052}, {"name": "น.ส.ดาริษา ศัลกวิเศษ", "pos": "ATC ๑", "ret": 2053}, {"name": "น.ส.กิ่งสุดา รวมสุข", "pos": "ATC ๑", "ret": 2055}, {"name": "น.ส.โชติกา มูลรินทร์", "pos": "ATC ๑", "ret": 2056}, {"name": "นายจิตต์อนันต์ ทิพยศักดิ์", "pos": "ATC ๑", "ret": 2054}, {"name": "ร.ต.ท.กิตติพศ สุขวัฒนพันธ์", "pos": "ATC ๑", "ret": 2056}, {"name": "น.ส.ปณิตา พันธุ์จินดา", "pos": "ATC ๑", "ret": 2053}, {"name": "นายนฤมิต นิจรมย์", "pos": "ATC ๑", "ret": 2053}, {"name": "นายไอลวิล วิเศษจิตร", "pos": "ATC ๑", "ret": 2053}, {"name": "นายติณณภพ มูลเมือง", "pos": "ATC ๑", "ret": 2055}, {"name": "นายณัฐพงศ์ มูลสาร", "pos": "ATC ๑", "ret": 2055}, {"name": "นายญาณกร ศิริลักษณ์", "pos": "ATC ๑", "ret": 2056}, {"name": "นายกวิน แก้วเขียน", "pos": "ATC ๑", "ret": 2055}, {"name": "นายณพัชร เชื้อสะอาด", "pos": "ATC ๑", "ret": 2052}], "sl": [{"name": "น.ส.น้ำเงิน อินทร์เอี่ยม", "pos": "ATC ๓", "ret": 2027}, {"name": "นายสุรวุธ บุญรอด", "pos": "ผจก.", "ret": 2028}, {"name": "นางสิริพร เอี่ยมสอาด", "pos": "ATC ๓", "ret": 2034}, {"name": "น.ส.พิณรัตน์ มั่นคง", "pos": "ATC ๒", "ret": 2029}, {"name": "นายนพพร อารีสวัสดิ์", "pos": "ATC ๓", "ret": 2027}, {"name": "น.ส.พิชชาภัทร์ กมลศิริอนันต์", "pos": "ATC ๓", "ret": 2034}, {"name": "นายธวัชชัย สุวรรณ", "pos": "ผจก.", "ret": 2028}, {"name": "นางกรรณิกา กิติศิริ", "pos": "ผจก.", "ret": 2034}, {"name": "นายเขตร์ กิติศิริ", "pos": "ผจก.", "ret": 2035}, {"name": "นายเจริญ ทองเกิด", "pos": "ผจก.", "ret": 2029}, {"name": "นายวิพจน์ ทรัพย์พรรณ", "pos": "ผจก.", "ret": 2030}, {"name": "นางพิดาชวินทร์ ทรัพย์พรรณ", "pos": "ATC ๓", "ret": 2032}, {"name": "นางสรัญรัชต์ วสิษฐ์รัตนกุล", "pos": "ATC ๓", "ret": 2032}, {"name": "นางวลัยพรรณ ละเอียด", "pos": "ATC ๓", "ret": 2032}, {"name": "นายมงคล ผูกจิต", "pos": "ผจก.", "ret": 2030}, {"name": "นายศุภชัย เจริญถัมภ์", "pos": "ผจก.", "ret": 2026}, {"name": "นายประพันธ์ เอี่ยมสอาด", "pos": "ผจก.", "ret": 2030}, {"name": "นางรติรัตน์ ภูตีนผา", "pos": "ผจก.", "ret": 2030}, {"name": "น.ส.พิชญา ธรรมสามิสร", "pos": "ผจก.", "ret": 2040}, {"name": "นายพุทธิวัฒน์ อภิบาลไกรศร", "pos": "ATC ๓", "ret": 2036}, {"name": "นายกฤษฎิ์ คงยา", "pos": "ATC ๓", "ret": 2035}, {"name": "นายสาธิต เกาะแจ่มใส", "pos": "ATC ๓", "ret": 2039}, {"name": "นายมวลเทพ แสงไทยารักษ์", "pos": "ผจก.", "ret": 2039}, {"name": "นายภัทรวุฒิ อินทร์อุดม", "pos": "ผจก.", "ret": 2040}, {"name": "นายกฤษฎา คำหลอม", "pos": "ผจก.", "ret": 2041}, {"name": "น.ส.สุดารัตน์ ตั้งประเสริฐ", "pos": "ATC ๓", "ret": 2043}, {"name": "นางธารทิพย์ พงษ์อ่ำ", "pos": "ผจก.", "ret": 2046}, {"name": "น.ส.เกตน์สิริ มงคลวัจน์", "pos": "ATC ๓", "ret": 2046}, {"name": "นายปิยะพันธุ์ อินทร์งาม", "pos": "ATC ๒", "ret": 2047}, {"name": "น.ส.ณัฐปภัสร์ ธนัญชัยสิทธิกุล", "pos": "ATC ๒", "ret": 2049}, {"name": "น.ส.ธัญญารัตน์ ประเสริฐ", "pos": "ATC ๒", "ret": 2050}, {"name": "นางสาวิตรี วรกูล", "pos": "ATC ๒", "ret": 2052}, {"name": "น.ส.จุฬาลักษณ์ สมวันดี", "pos": "ATC ๑", "ret": 2054}, {"name": "น.ส.นันท์ชนก ดุสิตากร", "pos": "ATC ๑", "ret": 2053}, {"name": "น.ส.วัลลภา นิลพันธ์", "pos": "ATC ๑", "ret": 2053}, {"name": "น.ส.รวิชา พูลนุช", "pos": "ATC ๑", "ret": 2054}, {"name": "นายนิธิธนันท์ เอนกธันยวงศ์", "pos": "ATC ๑", "ret": 2054}, {"name": "น.ส.ณัฐกานต์ กุสุโมทย์", "pos": "ATC ๑", "ret": 2057}, {"name": "นายณ ภัทร ประเสริฐสม", "pos": "ATC ๑", "ret": 2054}, {"name": "นายศีลวัฒน์ ละเอียด", "pos": "ATC ๑", "ret": 2055}], "sbb": [{"name": "นายศรัณย์ สายพันธ์", "pos": "ผจก.", "ret": 2034}, {"name": "นางสุภาภรณ์ คันศร", "pos": "ผจก.", "ret": 2032}, {"name": "นายชัยยัณ การฟุ้ง", "pos": "ผจก.", "ret": 2028}, {"name": "นายชาติประเสริฐ บุญไชย", "pos": "ผจก.", "ret": 2036}, {"name": "พ.จ.อ.ชูชีพ จอยเอกา", "pos": "ผจก.", "ret": 2034}, {"name": "น.ส.ทิพยวดี ทองน้อย", "pos": "ผจก.", "ret": 2046}, {"name": "น.ส.วิภาวี พิบูล", "pos": "ATC ๓", "ret": 2050}, {"name": "น.ส.เบญจรัตน์ ชัยโชติ", "pos": "ATC ๓", "ret": 2046}, {"name": "น.ส.จันทร์จิรา ปิยทัศนกุล", "pos": "ATC ๓", "ret": 2049}, {"name": "น.ส.กรกฎ ตีรมาโนช", "pos": "ATC ๓", "ret": 2047}, {"name": "น.ส.สุปรียา จิตรหัสต์ชัย", "pos": "ATC ๓", "ret": 2050}, {"name": "น.ส.ชนิกานต์ วรเชษฐ์", "pos": "ATC ๓", "ret": 2047}, {"name": "น.ส.ณัฐธิดา วิกสิตกุล", "pos": "ATC ๓", "ret": 2049}, {"name": "นายพชร ปทุมบาล", "pos": "ATC ๑", "ret": 2053}, {"name": "น.ส.ขวัญชนก ลีแสน", "pos": "ATC ๑", "ret": 2054}], "so": [{"name": "น.ส.ชนิษฎา ชิดเครือ", "pos": "ผจก.", "ret": 2030}, {"name": "นายหงสรัชต์ ไชยหิรัญฤทธิ์", "pos": "ATC ๓", "ret": 2031}, {"name": "นางจินตนา กุลถวายพร", "pos": "ผจก.", "ret": 2029}, {"name": "นางจันทร์ทิพย์ พลโคตร", "pos": "ผจก.", "ret": 2033}, {"name": "นางอุทัยวรรณ สุขสวัสดิ์", "pos": "ATC ๓", "ret": 2030}, {"name": "นายกิตติพันธ์ ชนะสงคราม", "pos": "ผจก.", "ret": 2027}, {"name": "น.ส.กนกพร นิยมสิทธิ์", "pos": "ATC ๓", "ret": 2030}, {"name": "น.ส.ศศิพักตร์ ภาคสุโพธิ์", "pos": "ผจก.", "ret": 2032}, {"name": "นางหนึ่งนุช พิมพิไสย", "pos": "ผจก.", "ret": 2031}, {"name": "นายสำเริง สารโภค", "pos": "ผจก.", "ret": 2033}, {"name": "นายวุฒิชัย อยู่สา", "pos": "ผจก.", "ret": 2039}, {"name": "น.ส.อรัญญา สุขสมเพียร", "pos": "ผจก.", "ret": 2036}, {"name": "น.ส.กนกเนตร หล้าวงศ์", "pos": "ATC ๓", "ret": 2037}, {"name": "น.ส.นภัสวรรณ นาคหล่อ", "pos": "ผจก.", "ret": 2040}, {"name": "นายวิทวัส ทักษณา", "pos": "ATC ๓", "ret": 2041}, {"name": "น.ส.วิภาดา เหล่าไพบูลย์", "pos": "ATC ๓", "ret": 2039}, {"name": "นายจักริน จันทะแจ้ง", "pos": "ผจก.", "ret": 2041}, {"name": "น.ส.อินทิตา ชนธีร์ภากุล", "pos": "ATC ๓", "ret": 2040}, {"name": "น.ส.ลออปรีย์ ดอกชะเอม", "pos": "ATC ๓", "ret": 2043}, {"name": "นายปฏิภาณ บุญจูง", "pos": "ATC ๓", "ret": 2042}, {"name": "น.ส.เศรณี ทองกร", "pos": "ATC ๓", "ret": 2045}, {"name": "ร.ต.สาวิตร์ กระต่ายทอง", "pos": "ATC ๓", "ret": 2045}, {"name": "นายคมเดช จิรเดโชชัย", "pos": "ผจก.", "ret": 2040}, {"name": "น.ส.ภัทรียาภรณ์ พลพวก", "pos": "ATC ๓", "ret": 2046}, {"name": "นายบดินทร์ ดีวงษ์", "pos": "ATC ๓", "ret": 2044}, {"name": "นายพงษ์เพ็ญ ไชยสว่าง", "pos": "ATC ๓", "ret": 2046}, {"name": "นายนิติกุล ชมตระกูล", "pos": "ATC ๓", "ret": 2046}, {"name": "น.ส.อรญา เหมยากร", "pos": "ATC ๓", "ret": 2043}, {"name": "น.ส.พรภัทร ดวงเทียน", "pos": "ATC ๑", "ret": 2049}, {"name": "น.ส.อรณิชา จิตเจริญ", "pos": "ATC ๒", "ret": 2054}, {"name": "นายเทพอวยพร ทิพย์วังเมฆ", "pos": "ATC ๒", "ret": 2055}, {"name": "น.ส.ประภาพิมพ์ แก้วมานพ", "pos": "ATC ๒", "ret": 2054}, {"name": "น.ส.จุฑามาศ อินทรกองแก้ว", "pos": "ATC ๑", "ret": 2055}, {"name": "นายอัฑฒ์ จันทะเดช", "pos": "ATC ๑", "ret": 2055}, {"name": "นายกิรติกร แก้วปานกัน", "pos": "ATC ๑", "ret": 2053}, {"name": "นายภาณุเดช สายแสน", "pos": "ATC ๑", "ret": 2053}, {"name": "น.ส.ชนิษฐา พันธศรี", "pos": "ATC ๑", "ret": 2057}], "sm": [{"name": "น.ส.วิไลพร หมั่นเฮง", "pos": "ผจก.", "ret": 2039}, {"name": "นายอัศจรรย์ พิลาภ", "pos": "ผจก.", "ret": 2042}, {"name": "น.ส.นันทิดา ทรงคุณมาส", "pos": "ATC ๓", "ret": 2051}, {"name": "นายณัฐวีร ระวังสำโรง", "pos": "ATC ๒", "ret": 2053}]}, "staff_students": {"sk": [{"name": "นายจิรพัชร โพธิ์งาม", "lv": "Lv.7", "rating": null, "course": null, "status": "-"}, {"name": "น.ส.จตุพร ธารดำรงค์", "lv": "Lv.7", "rating": null, "course": null, "status": "-"}, {"name": "น.ส.สุรีย์พร มีสง่า", "lv": "Lv.7", "rating": null, "course": null, "status": "-"}, {"name": "นายคุณานนท์ แทนรินทร์", "lv": "Lv.7", "rating": null, "course": null, "status": "-"}, {"name": "นายณัชณศักย์ ทรัพย์ทิม", "lv": "Lv.7", "rating": null, "course": null, "status": "-"}, {"name": "น.ส.อรนาฏ ฉวีรุ่งรัตน์", "lv": "Lv.7", "rating": null, "course": null, "status": "-"}, {"name": "นายชัยพันธ์ จึงสกุลวัฒนา", "lv": "Lv.7", "rating": null, "course": null, "status": "-"}, {"name": "น.ส.ภูพัตรา ภูรีนันทนิมิต", "lv": "Lv.7", "rating": null, "course": null, "status": "-"}, {"name": "นายณัฐพร อินสว่าง", "lv": "Lv.7", "rating": null, "course": null, "status": "-"}, {"name": "น.ส.มนัสดา สุวรรณกูฏ", "lv": "Lv.7", "rating": null, "course": null, "status": "-"}, {"name": "นายอุดมทรัพย์ พูลสวัสดิ์", "lv": "Lv.7", "rating": null, "course": null, "status": "-"}, {"name": "นายพิสิษฐ์ ดุสิตศานติ์", "lv": "Lv.7", "rating": null, "course": null, "status": "-"}, {"name": "นายภูวริศ ธาดาทองกุล", "lv": "Lv.7", "rating": null, "course": null, "status": "-"}, {"name": "น.ส.เกศกัญญา ดวงเดือน", "lv": "Lv.7", "rating": null, "course": null, "status": "-"}, {"name": "นายเทอดพงษ์ กล้าหาญ", "lv": "Lv.7", "rating": null, "course": null, "status": "-"}, {"name": "นายภานุพงศ์ ดิษฐวิศาล", "lv": "Lv.7", "rating": null, "course": null, "status": "-"}, {"name": "นายบารเมษฐ์ เศรษฐโชตินันท์", "lv": "Lv.7", "rating": null, "course": null, "status": "-"}, {"name": "นายพีรภัทร ชัยวันเพ็ญ", "lv": "Lv.7", "rating": null, "course": null, "status": "-"}, {"name": "น.ส.อภิชญา เอื้องอุดมสิน", "lv": "Lv.7", "rating": null, "course": null, "status": "-"}, {"name": "นายกันตพงศ์ สำอางค์กาย", "lv": "Lv.7", "rating": null, "course": null, "status": "-"}, {"name": "นายกิตติคุณ สุพะศิลป์", "lv": "Lv.7", "rating": null, "course": null, "status": "-"}, {"name": "นายวสันต์ วิไลวงศ์", "lv": "Lv.7", "rating": null, "course": null, "status": "-"}, {"name": "นายสมคิด เลาะเดรุส", "lv": "Lv.7", "rating": null, "course": null, "status": "-"}], "sj": [{"name": "น.ส.นันท์ณภัสร การงาน", "lv": "Lv.7", "rating": 2028, "course": "ACP (Area Control (Procedural): BACC Unit Endorsement Course)", "status": "-"}, {"name": "นายอลังการ ตั้งใจเปี่ยม", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control (Surveillance): BACC Unit Endorsement Course)", "status": "-"}, {"name": "นายวริทธร มณฑลผลิน", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control (Surveillance): BACC Unit Endorsement Course)", "status": "-"}, {"name": "นายฐานวุฒิ โกษากุล", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control (Surveillance): BACC Unit Endorsement Course)", "status": "-"}, {"name": "นายบวรนาถ สุวิวัฒน์", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control (Surveillance): BACC Unit Endorsement Course)", "status": "-"}, {"name": "นายสุรเชษฏ์ พิมาพันธุ์ศรี", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control (Surveillance): BACC Unit Endorsement Course)", "status": "-"}, {"name": "นายภูฆินทร์ พุทธกูล", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control (Surveillance): BACC Unit Endorsement Course)", "status": "-"}, {"name": "นายอินทร์นวัต สังข์มนัส", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control (Surveillance): BACC Unit Endorsement Course)", "status": "-"}, {"name": "นายบวร ทายาทสุวรรณ", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control (Surveillance): BACC Unit Endorsement Course)", "status": "-"}, {"name": "นายนนทวุฒิ ชีวศรีรุ่งเรือง", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control (Surveillance): BACC Unit Endorsement Course)", "status": "-"}, {"name": "นายเมธัส เรียงวงศ์", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control (Surveillance): BACC Unit Endorsement Course)", "status": "-"}, {"name": "นายพชร พหูวณิช", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control (Surveillance): BACC Unit Endorsement Course)", "status": "-"}, {"name": "นายฤทธิ์ณรงค์ กล่อมจิตร์", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control (Surveillance): BACC Unit Endorsement Course)", "status": "-"}, {"name": "นายภูมิ ยุติธรรม", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control (Surveillance): BACC Unit Endorsement Course)", "status": "-"}, {"name": "นายศุภณัฐ นิธยานนท์", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control (Surveillance): BACC Unit Endorsement Course)", "status": "-"}, {"name": "น.ส.ศศิกุลวี ไพจิตร", "lv": "Lv.7", "rating": 2028, "course": "ACP (Area Control (Procedural): BACC Unit Endorsement Course)", "status": "-"}, {"name": "น.ส.ศศิชนก เฟื่องไพบูลย์", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control (Surveillance): BACC Unit Endorsement Course)", "status": "-"}, {"name": "นายจิตต์พัฒท์ รวีอร่ามวงศ์", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control (Surveillance): BACC Unit Endorsement Course)", "status": "-"}, {"name": "นายอภิราม ธีรนวกรรม", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control Sueveillance Rating)", "status": "-"}, {"name": "นายกรกฎ จันทโรภาส", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control Sueveillance Rating)", "status": "-"}, {"name": "นายกิตติคุณ มหาศร", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control Sueveillance Rating)", "status": "-"}, {"name": "นายอภิสิทธิ์ ภิรมย์เลิศ", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control Sueveillance Rating)", "status": "-"}, {"name": "นายประศิลป์ กันทะวงศ์", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control Sueveillance Rating)", "status": "-"}, {"name": "นายธนัตถ์ สุประสงค์สิน", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control Sueveillance Rating)", "status": "-"}, {"name": "นายจตุรพร ประหยัด", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control Sueveillance Rating)", "status": "-"}, {"name": "นายสลิล คุณาพรสุจริต", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control Sueveillance Rating)", "status": "-"}, {"name": "นายกฤตยชญ์ รักทอง", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control Sueveillance Rating)", "status": "-"}, {"name": "น.ส.ปาจรีย์ อิทธิรัตนโชติ", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control Sueveillance Rating)", "status": "-"}, {"name": "น.ส.เพชรสุดา มหาดไทย", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control Sueveillance Rating)", "status": "-"}, {"name": "นายอภินัทธ์ รุ่งรัตน์ธวัชชัย", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control Sueveillance Rating)", "status": "-"}, {"name": "น.ส.พลอยกัญญา จรัสวิริยะกุล", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control Sueveillance Rating)", "status": "-"}, {"name": "นายพัฐวัชร์ ถือทอง", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control (Surveillance): BACC Unit Endorsement Course)", "status": "-"}, {"name": "ว่าที่ ร.ต.อติคุณ ตั้งเจริญเวช", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control (Surveillance): BACC Unit Endorsement Course)", "status": "-"}, {"name": "น.ส.ญาตาวี ปทะวานิช", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control Sueveillance Rating)", "status": "-"}, {"name": "น.ส.ฉัตรฐิยา นาราธรรมนนท์", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control (Surveillance): BACC Unit Endorsement Course)", "status": "-"}, {"name": "นายณัฐดนัย ศักดิ์คงคา", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control (Surveillance): BACC Unit Endorsement Course)", "status": "-"}, {"name": "น.ส.ณัฏฐณิชา สุขเกษม", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control (Surveillance): BACC Unit Endorsement Course)", "status": "-"}, {"name": "นายยอดเถา ทรัพย์พ่วง", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control (Surveillance): BACC Unit Endorsement Course)", "status": "-"}, {"name": "นายพะริษฐ์ เวลส์ช", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control Sueveillance Rating)", "status": "-"}, {"name": "นางปริม ภิรมย์เลิศ", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control Sueveillance Rating)", "status": "-"}, {"name": "นางเกวลี เจริญอนุสรณ์", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control Sueveillance Rating)", "status": "-"}, {"name": "น.ส.สรัลพร พันธ์นรา", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control Sueveillance Rating)", "status": "-"}, {"name": "น.ส.พธูกมล พานิชนก", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control (Surveillance): BACC Unit Endorsement Course)", "status": "-"}, {"name": "น.ส.ชุมาพร จิตรชู", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control (Surveillance): BACC Unit Endorsement Course)", "status": "-"}, {"name": "นายคณิน ช่วยเยียวยา", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control Sueveillance Rating)", "status": "-"}, {"name": "นายอชิต ภูมิชาญานันท์", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control Sueveillance Rating)", "status": "-"}, {"name": "น.ส.ยลรวิ คุปตะสิน", "lv": "Lv.7", "rating": 2028, "course": "ACP (Area Control (Procedural): BACC Unit Endorsement Course)", "status": "-"}, {"name": "นายกิตติภัฏ จุฑาวรพงศ์", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control Sueveillance Rating)", "status": "-"}, {"name": "นายตวิษ โรจน์ไพศาลสกุล", "lv": "Lv.7", "rating": 2028, "course": "ACP (Area Control (Procedural): BACC Unit Endorsement Course)", "status": "-"}, {"name": "นายเชนทวิช สิงห์แก้ว", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control Sueveillance Rating)", "status": "-"}, {"name": "น.ส.มัชฌิมา ลี้ตระกูล", "lv": "Lv.7", "rating": 2028, "course": "ACP (Area Control (Procedural): BACC Unit Endorsement Course)", "status": "-"}, {"name": "นายศุภฤกษ์ จตุรนต์รัศมี", "lv": "Lv.7", "rating": null, "course": null, "status": "-"}, {"name": "นายก้องเกียรติ จารุสกุล", "lv": "Lv.7", "rating": 2028, "course": "ACP (Area Control (Procedural): BACC Unit Endorsement Course)", "status": "-"}, {"name": "นายอาทิตย์ เลาหทวีโชค", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control Sueveillance Rating)", "status": "-"}, {"name": "น.ส.ธิติมณี กล่อมเกลา", "lv": "Lv.7", "rating": 2026, "course": "ACS (Area Control Sueveillance Rating)", "status": "-"}, {"name": "น.ส.พัทธ์ธีรา ลาภธนานนท์", "lv": "Lv.7", "rating": 2028, "course": "ACP (Area Control (Procedural): BACC Unit Endorsement Course)", "status": "-"}, {"name": "น.ส.ศรัณยา ไกรสิทธิศิริกุล", "lv": "Lv.7", "rating": 2028, "course": "ACP (Area Control (Procedural): BACC Unit Endorsement Course)", "status": "-"}, {"name": "น.ส.ฌัลลรี เฌอรีรักษ์", "lv": "Lv.7", "rating": 2028, "course": "ACP (Area Control (Procedural): BACC Unit Endorsement Course)", "status": "-"}, {"name": "นายพงศ์ปณต โชติช่วง", "lv": "Lv.7", "rating": 2028, "course": "ACP (Area Control (Procedural): BACC Unit Endorsement Course)", "status": "-"}, {"name": "น.ส.ณัฐนิชา จงปัญญากุล", "lv": "Lv.7", "rating": 2028, "course": "ACP (Area Control (Procedural): BACC Unit Endorsement Course)", "status": "-"}, {"name": "น.ส.อภิษฎา นุชผ่องใส", "lv": "Lv.7", "rating": 2028, "course": "ACP (Area Control (Procedural): BACC Unit Endorsement Course)", "status": "-"}, {"name": "นายกานตพงศ์ พงศ์ศรีภิญโญ", "lv": "Lv.7", "rating": 2028, "course": "ACP (Area Control (Procedural): BACC Unit Endorsement Course)", "status": "-"}, {"name": "นายกร รุ่งโรจน์วณิชย์", "lv": "Lv.7", "rating": 2028, "course": "ACP (Area Control (Procedural): BACC Unit Endorsement Course)", "status": "-"}, {"name": "นายพีรพล อนันตวราศิลป์", "lv": "Lv.7", "rating": 2028, "course": "ACP (Area Control (Procedural): BACC Unit Endorsement Course)", "status": "-"}, {"name": "น.ส.ฐิติภรณ์ ปรีชาเมธ", "lv": "Lv.7", "rating": 2028, "course": "ACP (Area Control (Procedural): BACC Unit Endorsement Course)", "status": "-"}, {"name": "น.ส.ปาจรีย์ จิระยิ่งเจริญ", "lv": "Lv.7", "rating": 2028, "course": "ACP (Area Control (Procedural): BACC Unit Endorsement Course)", "status": "-"}, {"name": "น.ส.ธัญญ์นลิน วินิจฉัยกุล", "lv": "Lv.7", "rating": 2028, "course": "ACP (Area Control (Procedural): BACC Unit Endorsement Course)", "status": "-"}, {"name": "นายภูดิศ ชีวะปรีชา", "lv": "Lv.7", "rating": 2028, "course": "ACP (Area Control (Procedural): BACC Unit Endorsement Course)", "status": "-"}, {"name": "นายธนัท ศรีธนภัครางกูร", "lv": "Lv.7", "rating": 2028, "course": "ACP (Area Control (Procedural): BACC Unit Endorsement Course)", "status": "-"}, {"name": "นายนภัส พันธุ์แสงอร่าม", "lv": "Lv.7", "rating": 2028, "course": "ACP (Area Control (Procedural): BACC Unit Endorsement Course)", "status": "-"}, {"name": "น.ส.ธมลวรรณ ลาภานันต์", "lv": "Lv.7", "rating": 2028, "course": "ACP (Area Control (Procedural): BACC Unit Endorsement Course)", "status": "-"}, {"name": "นายชีวินทรีย์ วีระวานิช", "lv": "Lv.7", "rating": 2028, "course": "ACP (Area Control (Procedural): BACC Unit Endorsement Course)", "status": "-"}, {"name": "นายนนทวัฒน์ พูนสุขวัฒนา", "lv": "Lv.7", "rating": 2028, "course": "ACP (Area Control (Procedural): BACC Unit Endorsement Course)", "status": "-"}, {"name": "น.ส.คุณัญญา ศรีวงษ์", "lv": "Lv.7", "rating": 2028, "course": "ACP (Area Control (Procedural): BACC Unit Endorsement Course)", "status": "-"}, {"name": "นายกังวาล พูลทรัพย์", "lv": "Lv.7", "rating": 2028, "course": "ACP (Area Control (Procedural): BACC Unit Endorsement Course)", "status": "-"}], "sb": [{"name": "น.ส.อัญชฎา อุดมจรรยา", "lv": "Lv.7", "rating": 2026, "course": "APP-Chiangrai Sector (Approach Control Procedural Rating (Chiang Rai Sector))", "status": "-"}, {"name": "นายปิติภูมิ จริยะยรรยง", "lv": "Lv.7", "rating": 2026, "course": "APP-Chiangrai Sector (Approach Control Procedural Rating (Chiang Rai Sector))", "status": "Terminated"}, {"name": "นายปิยวัฒน์ กลั่นเรืองแสง", "lv": "Lv.7", "rating": 2026, "course": "APP-Chiangrai Sector (Approach Control Procedural Rating (Chiang Rai Sector))", "status": "-"}, {"name": "นายธงชัย ณ พัทลุง", "lv": "Lv.7", "rating": 2026, "course": "APP-Chiangrai Sector (Approach Control Procedural Rating (Chiang Rai Sector))", "status": "-"}, {"name": "นายปฏิกานต์ นิลเลื่อม", "lv": "Lv.7", "rating": 2026, "course": "APP-Khon Kaen Sector (Approach Control Procedural Rating (Khon Kaen Sector))", "status": "-"}, {"name": "น.ส.นัชชา ชาญชัยศรี", "lv": "Lv.5", "rating": 2028, "course": "APP-Chiangrai Sector (Approach Control Procedural Rating (Chiang Rai Sector))", "status": "-"}, {"name": "น.ส.ฐิติพัชร มีสวัสดิ์", "lv": "Lv.5", "rating": 2028, "course": "APP-Chiangrai Sector (Approach Control Procedural Rating (Chiang Rai Sector))", "status": "-"}, {"name": "นายชัชนันท์ วงศ์แก้ว", "lv": "Lv.5", "rating": 2028, "course": "APS-Ubon Sector (Approach Control Surveillance Rating (Ubon Sector))", "status": "-"}, {"name": "นายปิยภูมิ ตะเภาพงษ์", "lv": "Lv.5", "rating": 2028, "course": "APS-Ubon Sector (Approach Control Surveillance Rating (Ubon Sector))", "status": "-"}, {"name": "นายสิรภพ แก้วไสย", "lv": "Lv.5", "rating": 2028, "course": "APS-Ubon Sector (Approach Control Surveillance Rating (Ubon Sector))", "status": "-"}, {"name": "นายณวรรธน์ คำด้วง", "lv": "Lv.5", "rating": 2028, "course": "APS-Ubon Sector (Approach Control Surveillance Rating (Ubon Sector))", "status": "-"}, {"name": "นายกัณณ์ หาญชาญชัย", "lv": "Lv.5", "rating": 2028, "course": "APP-Chiangrai Sector (Approach Control Procedural Rating (Chiang Rai Sector))", "status": "-"}, {"name": "น.ส.ปิ่นปินัทธ์ ทิมาภรณ์", "lv": "Lv.5", "rating": 2028, "course": "APP-Chiangrai Sector (Approach Control Procedural Rating (Chiang Rai Sector))", "status": "-"}, {"name": "นายจิตกานต์ แก้วไชยะ", "lv": "Lv.5", "rating": 2029, "course": "APP-Khon Kaen Sector (Approach Control Procedural Rating (Khon Kaen Sector))", "status": "-"}, {"name": "นายวรวิช ศรีคำภา", "lv": "Lv.5", "rating": 2029, "course": "APS-Samui Sector (Approach Control Surveillance Rating (Samui Sector))", "status": "-"}, {"name": "นายธรรมยศ จำปาทิพย์พงศ์", "lv": "Lv.5", "rating": 2029, "course": "APP-Khon Kaen Sector (Approach Control Procedural Rating (Khon Kaen Sector))", "status": "-"}, {"name": "นายวีรวิชญ์ มิลินพัฒนกรณ์", "lv": "Lv.5", "rating": 2029, "course": "APP-Khon Kaen Sector (Approach Control Procedural Rating (Khon Kaen Sector))", "status": "-"}, {"name": "น.ส.จิรญา ชัยประภา", "lv": "Lv.5", "rating": 2029, "course": "APS-Samui Sector (Approach Control Surveillance Rating (Samui Sector))", "status": "-"}, {"name": "นายณัฐพงค์ ผูกจิต", "lv": "Lv.5", "rating": 2029, "course": "APP-Khon Kaen Sector (Approach Control Procedural Rating (Khon Kaen Sector))", "status": "-"}, {"name": "น.ส.ทันธิยา ไตรสุทันธ์", "lv": "Lv.5", "rating": 2029, "course": "APS-Samui Sector (Approach Control Surveillance Rating (Samui Sector))", "status": "-"}], "sn": [], "sp": [{"name": "น.ส.ศกลวรรณ ยอดแก้ว", "lv": "Lv.5", "rating": 2026, "course": "ADV/ADI-VTSG (Aerodrome Control (ADV/ADI): Unit Endorsement Course (Krabi Airport))", "status": "รอการทดสอบจาก มป."}, {"name": "น.ส.บุญธิดา พุ่มอยู่", "lv": "Lv.5", "rating": 2026, "course": "ADV/ADI-VTSG (Aerodrome Control (ADV/ADI): Unit Endorsement Course (Krabi Airport))", "status": "รอการทดสอบจาก มป."}, {"name": "นายอนุโภช จินนุกูล", "lv": "Lv.5", "rating": 2026, "course": "ADV/ADI-VTSG (Aerodrome Control (ADV/ADI): Unit Endorsement Course (Krabi Airport))", "status": "รอการทดสอบจาก มป."}, {"name": "น.ส.สุนันทา ณ ปัตตานี", "lv": "Lv.5", "rating": 2026, "course": "ADV/ADI-VTSG (Aerodrome Control (ADV/ADI): Unit Endorsement Course (Krabi Airport))", "status": "รอการทดสอบจาก มป."}, {"name": "นายกันตชาติ วุฒิเมธาสิน", "lv": "Lv.5", "rating": 2026, "course": "ADV/ADI-VTSG (Aerodrome Control (ADV/ADI): Unit Endorsement Course (Krabi Airport))", "status": "รอการทดสอบจาก มป."}, {"name": "นายอัษฎาวุธ พวงจันทร์", "lv": "Lv.5", "rating": 2026, "course": "ADV/ADI-VTSG (Aerodrome Control (ADV/ADI): Unit Endorsement Course (Krabi Airport))", "status": "รอการทดสอบจาก มป."}, {"name": "น.ส.จีรนิตย์ ยอดเวียน", "lv": "Lv.5", "rating": 2026, "course": "ADV/ADI-VTSG (Aerodrome Control (ADV/ADI): Unit Endorsement Course (Krabi Airport))", "status": "พักรักษาตัวจากอุบัติเหตุ"}, {"name": "น.ส.อภิชญา แวดเวียง", "lv": "Lv.5", "rating": 2026, "course": "ADV/ADI-VTSG (Aerodrome Control (ADV/ADI): Unit Endorsement Course (Krabi Airport))", "status": "รอการทดสอบจาก มป."}, {"name": "นายคณิต มาสม", "lv": "Lv.5", "rating": 2026, "course": "ADV/ADI-VTSG (Aerodrome Control (ADV/ADI): Unit Endorsement Course (Krabi Airport))", "status": "ลาออก"}, {"name": "น.ส.พัชรพร มาศมหาศาล", "lv": "Lv.5", "rating": null, "course": "ADV/ADI-VTSP (Aerodrome Control (ADV/ADI): Unit Endorsement Course (Phuket Airport))", "status": "รอหลักสูตรได้รับความเห็นชอบจาก กพท. "}, {"name": "น.ส.วริสรา พึ่งบุญ", "lv": "Lv.5", "rating": null, "course": "ADV/ADI-VTSP (Aerodrome Control (ADV/ADI): Unit Endorsement Course (Phuket Airport))", "status": "รอหลักสูตรได้รับความเห็นชอบจาก กพท. "}, {"name": "น.ส.ฐิติวรดา ไชยลี", "lv": "Lv.5", "rating": null, "course": "ADV/ADI-VTSP (Aerodrome Control (ADV/ADI): Unit Endorsement Course (Phuket Airport))", "status": "รอหลักสูตรได้รับความเห็นชอบจาก กพท. "}, {"name": "น.ส.พนิตตา ร่มฉัตรทอง", "lv": "Lv.5", "rating": null, "course": "ADV/ADI-VTSP (Aerodrome Control (ADV/ADI): Unit Endorsement Course (Phuket Airport))", "status": "รอหลักสูตรได้รับความเห็นชอบจาก กพท. "}, {"name": "น.ส.ชนนิกานต์ แสงใสแก้ว", "lv": "Lv.5", "rating": null, "course": "ADV/ADI-VTSP (Aerodrome Control (ADV/ADI): Unit Endorsement Course (Phuket Airport))", "status": "รอหลักสูตรได้รับความเห็นชอบจาก กพท. "}, {"name": "น.ส.พิมพ์สิริ รักษาแก้ว", "lv": "Lv.5", "rating": null, "course": "ADV/ADI-VTSP (Aerodrome Control (ADV/ADI): Unit Endorsement Course (Phuket Airport))", "status": "รอหลักสูตรได้รับความเห็นชอบจาก กพท. "}, {"name": "น.ส.บุสริน สุขประเสริฐ", "lv": "Lv.5", "rating": null, "course": "ADV/ADI-VTSP (Aerodrome Control (ADV/ADI): Unit Endorsement Course (Phuket Airport))", "status": "รอหลักสูตรได้รับความเห็นชอบจาก กพท. "}, {"name": "น.ส.สุดาพร เชื้อบุญมี", "lv": "Lv.5", "rating": null, "course": "ADV/ADI-VTSP (Aerodrome Control (ADV/ADI): Unit Endorsement Course (Phuket Airport))", "status": "รอหลักสูตรได้รับความเห็นชอบจาก กพท. "}, {"name": "น.ส.สุวิชฎา ส่องสุข", "lv": "Lv.5", "rating": null, "course": "ADV/ADI-VTSP (Aerodrome Control (ADV/ADI): Unit Endorsement Course (Phuket Airport))", "status": "รอหลักสูตรได้รับความเห็นชอบจาก กพท. "}, {"name": "น.ส.ศิริญญา จุฬาคำ", "lv": "Lv.5", "rating": null, "course": "ADV/ADI-VTSP (Aerodrome Control (ADV/ADI): Unit Endorsement Course (Phuket Airport))", "status": "รอหลักสูตรได้รับความเห็นชอบจาก กพท. "}, {"name": "นายธนภัทร จันทรอารี", "lv": "Lv.5", "rating": null, "course": "ADV/ADI-VTSP (Aerodrome Control (ADV/ADI): Unit Endorsement Course (Phuket Airport))", "status": "รอหลักสูตรได้รับความเห็นชอบจาก กพท. "}, {"name": "น.ส.ณัฐชยา กลั่นมาลี", "lv": "Lv.5", "rating": null, "course": "ADV/ADI-VTSP (Aerodrome Control (ADV/ADI): Unit Endorsement Course (Phuket Airport))", "status": "รอหลักสูตรได้รับความเห็นชอบจาก กพท. "}, {"name": "น.ส.รินรดา สกุลนอก", "lv": "Lv.5", "rating": null, "course": "ADV/ADI-VTSP (Aerodrome Control (ADV/ADI): Unit Endorsement Course (Phuket Airport))", "status": "รอหลักสูตรได้รับความเห็นชอบจาก กพท. "}, {"name": "น.ส.ปวิชญา อ่อนศรี", "lv": "Lv.5", "rating": null, "course": "ADV/ADI-VTSP (Aerodrome Control (ADV/ADI): Unit Endorsement Course (Phuket Airport))", "status": "รอหลักสูตรได้รับความเห็นชอบจาก กพท. "}, {"name": "น.ส.จิวสา ศรีคำ", "lv": "Lv.5", "rating": null, "course": "ADV/ADI-VTSP (Aerodrome Control (ADV/ADI): Unit Endorsement Course (Phuket Airport))", "status": "รอหลักสูตรได้รับความเห็นชอบจาก กพท. "}, {"name": "นายพีรพัฒน์ สุภวาลย์", "lv": "Lv.5", "rating": null, "course": "ADV/ADI-VTSP (Aerodrome Control (ADV/ADI): Unit Endorsement Course (Phuket Airport))", "status": "รอหลักสูตรได้รับความเห็นชอบจาก กพท. "}], "sy": [], "sr": [{"name": "น.ส.ณัฏฐณิชา เจียมวุฒิศักดิ์", "lv": "Lv.5", "rating": 2027, "course": "ADC-VTSM (Aerodrome Control Rating (Samui Airport))", "status": "-"}, {"name": "นายต่อภูมิ บุญบางยาง", "lv": "Lv.5", "rating": null, "course": null, "status": "-"}, {"name": "นายรัญชน์ ไทยทองหลาง", "lv": "Lv.5", "rating": null, "course": null, "status": "-"}, {"name": "น.ส.สิริมา ลี้ยุทธานนท์", "lv": "Lv.5", "rating": null, "course": null, "status": "-"}, {"name": "นายชนสรณ์ สุนทรนนท์", "lv": "Lv.5", "rating": null, "course": null, "status": "-"}, {"name": "นายยศไชย ไชยยศ", "lv": "Lv.5", "rating": null, "course": null, "status": "-"}, {"name": "นายเชาวลิต แท่นหิรัญ", "lv": "Lv.5", "rating": 2027, "course": "ADC-VTSM (Aerodrome Control Rating (Samui Airport))", "status": "-"}, {"name": "น.ส.ณัฐพัชร์ สวัสดิ์วงษ์", "lv": "Lv.5", "rating": 2027, "course": "ADC-VTSM (Aerodrome Control Rating (Samui Airport))", "status": "-"}, {"name": "นายกมลทรรศน์ รุ่งศักดิ์เจริญชัย", "lv": "Lv.5", "rating": 2027, "course": "ADC-VTSM (Aerodrome Control Rating (Samui Airport))", "status": "-"}], "sc": [{"name": "น.ส.สุดารัตน์ วงศ์หยกสุริยา", "lv": "Lv.5", "rating": 2026, "course": "ADV/ADI-VTCT (Aerodrome Control (ADV/ADI): Unit Endorsement Course (Mae Fah Luang - Chiang Rai International Airport))", "status": "-"}, {"name": "น.ส.กมลวรรณ วชิรอนันต์", "lv": "Lv.5", "rating": 2026, "course": "ADV/ADI-VTCT (Aerodrome Control (ADV/ADI): Unit Endorsement Course (Mae Fah Luang - Chiang Rai International Airport))", "status": "-"}, {"name": "นายเฉลิมเกียรติ ฉัตรมงคลชาติ", "lv": "Lv.5", "rating": 2026, "course": "ADV/ADI-VTCT (Aerodrome Control (ADV/ADI): Unit Endorsement Course (Mae Fah Luang - Chiang Rai International Airport))", "status": "-"}, {"name": "น.ส.ธัญจิรา ทิพย์รัตน์", "lv": "Lv.5", "rating": 2026, "course": "ADV/ADI-VTCT (Aerodrome Control (ADV/ADI): Unit Endorsement Course (Mae Fah Luang - Chiang Rai International Airport))", "status": "-"}, {"name": "นายคมชาญ สุขประทัง", "lv": "Lv.5", "rating": 2026, "course": "ADV/ADI-VTCT (Aerodrome Control (ADV/ADI): Unit Endorsement Course (Mae Fah Luang - Chiang Rai International Airport))", "status": "-"}, {"name": "น.ส.สิรติกา อภิรติมัย", "lv": "Lv.5", "rating": null, "course": null, "status": "-"}, {"name": "น.ส.นิชาภา จันทร์เพ็ง", "lv": "Lv.5", "rating": 2026, "course": "ADV/ADI-VTCT (Aerodrome Control (ADV/ADI): Unit Endorsement Course (Mae Fah Luang - Chiang Rai International Airport))", "status": "-"}, {"name": "น.ส.ณัฏฐณิชา อยู่พุ่ม", "lv": "Lv.5", "rating": null, "course": null, "status": "-"}, {"name": "น.ส.ฐิติรัตน์ ตันไพเราะห์", "lv": "Lv.5", "rating": null, "course": null, "status": "-"}, {"name": "นายรุ่งทัช บุญเจริญ", "lv": "Lv.5", "rating": null, "course": null, "status": "-"}, {"name": "น.ส.นิชา ทาคำ", "lv": "Lv.5", "rating": null, "course": null, "status": "-"}, {"name": "นายนราวิชญ์ จันทร์ทอง", "lv": "Lv.5", "rating": null, "course": null, "status": "-"}, {"name": "น.ส.กัญญาณัฐ เครือจำปา", "lv": "Lv.5", "rating": null, "course": null, "status": "-"}], "sl": [{"name": "น.ส.อรทัย สมิตานนท์", "lv": "Lv.5", "rating": 2026, "course": "ADC-VTCN (Aerodrome Control Rating (Nan Nakhon Airport))", "status": "-"}, {"name": "น.ส.พิมพ์วรีย์ ศิริมาก", "lv": "Lv.5", "rating": 2026, "course": "ADC-VTPO (Aerodrome Control Rating (Sukhothai Airport))", "status": "-"}, {"name": "น.ส.กันยารัตน์ ฉิมแก้ว", "lv": "Lv.5", "rating": 2026, "course": "ADC-VTPO (Aerodrome Control Rating (Sukhothai Airport))", "status": "-"}, {"name": "น.ส.วรินยุพา นภาศิริปกรณ์", "lv": "Lv.5", "rating": 2026, "course": "ADC-VTPO (Aerodrome Control Rating (Sukhothai Airport))", "status": "-"}, {"name": "น.ส.ธันวารัตน์ ลิ้มเฮงสิน", "lv": "Lv.5", "rating": 2026, "course": "ADC-VTPO (Aerodrome Control Rating (Sukhothai Airport))", "status": "-"}, {"name": "น.ส.ชนิกานต์ วรรณา", "lv": "Lv.5", "rating": 2026, "course": "ADC-VTCN (Aerodrome Control Rating (Nan Nakhon Airport))", "status": "-"}, {"name": "น.ส.กันต์กมล ภู่ยางโทน", "lv": "Lv.5", "rating": null, "course": null, "status": "-"}, {"name": "น.ส.ปุณยนุช แสงจันทร์", "lv": "Lv.5", "rating": null, "course": null, "status": "-"}, {"name": "นายพุทธนนท์ นารถพลายพันธุ์", "lv": "Lv.5", "rating": null, "course": null, "status": "-"}], "sbb": [{"name": "นายวัชรพงศ์ หาคำ", "lv": "Lv.5", "rating": null, "course": null, "status": "-"}, {"name": "น.ส.วชิตรลดา แก่นลา", "lv": "Lv.5", "rating": null, "course": null, "status": "-"}], "so": [{"name": "นายพีรวิชญ์ ตระกูลสัจจาวัตร", "lv": "Lv.5", "rating": null, "course": null, "status": "-"}, {"name": "น.ส.ทองทิพย์ ฉิมเฉิด", "lv": "Lv.5", "rating": null, "course": null, "status": "-"}, {"name": "น.ส.ธภวรรณ วัฒนดำรงเดชน์", "lv": "Lv.5", "rating": null, "course": null, "status": "-"}], "sm": [{"name": "นายสมาธิ อุ่นจิตต", "lv": "Lv.5", "rating": null, "course": null, "status": "-"}, {"name": "นายกิติพร หอมวิเศษวงศา", "lv": "Lv.5", "rating": null, "course": null, "status": "-"}, {"name": "น.ส.กิตติยา ประยงค์หอม", "lv": "Lv.5", "rating": 2026, "course": "ADC-VTUO (Aerodrome Control (ADV/ADI): Unit Endorsement Course (Buri Ram Airport))", "status": "-"}, {"name": "นายธนวัฒน์ เผ่าดี", "lv": "Lv.5", "rating": 2026, "course": "ADC-VTUQ (Aerodrome Control (ADV/ADI): Unit Endorsement Course (Nakhon Ratchasima Airport))", "status": "-"}, {"name": "น.ส.ณิชกานต์ สุภารัตน์", "lv": "Lv.5", "rating": 2026, "course": "ADC-VTUQ (Aerodrome Control (ADV/ADI): Unit Endorsement Course (Nakhon Ratchasima Airport))", "status": "-"}, {"name": "น.ส.กุลรัศมิ์ เชาว์รักษ์หิรัญ", "lv": "Lv.5", "rating": 2026, "course": "ADC-VTUQ (Aerodrome Control (ADV/ADI): Unit Endorsement Course (Nakhon Ratchasima Airport))", "status": "-"}]}, "licensed_total": 867, "students_total": 185, "pipeline_4yr": 125, "retire_4yr": 61, "net_projection": [{"year": 2026, "nc": 79, "ret": 5, "net": 74, "end": 941}, {"year": 2027, "nc": 4, "ret": 12, "net": -8, "end": 933}, {"year": 2028, "nc": 34, "ret": 19, "net": 15, "end": 948}, {"year": 2029, "nc": 8, "ret": 25, "net": -17, "end": 931}, {"year": 2030, "nc": 0, "ret": 27, "net": -27, "end": 904}, {"year": 2031, "nc": 0, "ret": 31, "net": -31, "end": 873}, {"year": 2032, "nc": 0, "ret": 38, "net": -38, "end": 835}, {"year": 2033, "nc": 0, "ret": 30, "net": -30, "end": 805}, {"year": 2034, "nc": 0, "ret": 39, "net": -39, "end": 766}, {"year": 2035, "nc": 0, "ret": 41, "net": -41, "end": 725}], "projection": [{"year": 2026, "newCtrl": 79, "ratingExp": 6}, {"year": 2027, "newCtrl": 4, "ratingExp": 12}, {"year": 2028, "newCtrl": 34, "ratingExp": 0}, {"year": 2029, "newCtrl": 8, "ratingExp": 0}], "retire_all": [{"year": 2026, "v": 5}, {"year": 2027, "v": 12}, {"year": 2028, "v": 19}, {"year": 2029, "v": 25}, {"year": 2030, "v": 27}, {"year": 2031, "v": 31}, {"year": 2032, "v": 38}, {"year": 2033, "v": 30}, {"year": 2034, "v": 39}]};
+
+// ═══════════════════════════════════════════
+// GLOBAL STATE
+// ═══════════════════════════════════════════
+let activeCharts = [];
+let currentLoc = 'sj';
+let currentTab = 'licensed';
+let sortCol = '', sortDir = 1, searchVal = '', filterRet = 'all';
+
+// ═══════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════
+const YEARS_CE = [2026,2027,2028,2029,2030,2031,2032,2033,2034,2035];
+
+function posTag(p) {
+  const m = {'ผจก.':'pill-blue','ATC ๑':'pill-green','ATC ๒':'pill-gray','ATC ๓':'pill-teal'};
+  return `<span class="pill ${m[p]||'pill-gray'}">${p}</span>`;
+}
+function statusTag(s) {
+  if(!s||s==='-') return '';
+  if(s==='Terminated'||s.includes('ลาออก')) return `<span class="pill pill-red">${s}</span>`;
+  if(s.includes('รอการทดสอบ')||s.includes('พัก')) return `<span class="pill pill-amber">${s}</span>`;
+  if(s.includes('รอหลักสูตร')) return `<span class="pill pill-purple">${s}</span>`;
+  return `<span class="pill pill-gray">${s}</span>`;
+}
+function lvTag(lv) {
+  return lv==='Lv.7'?'<span class="pill pill-amber">Lv.7 ส่วนกลาง</span>':'<span class="pill pill-green">Lv.5 ภูมิภาค</span>';
+}
+function sortData(data, col) {
+  if(!col) return data;
+  return [...data].sort((a,b) => {
+    let va=a[col], vb=b[col];
+    if(va===null||va===undefined) va = col==='rating'?9999:'ๆ';
+    if(vb===null||vb===undefined) vb = col==='rating'?9999:'ๆ';
+    if(typeof va==='number') return sortDir*(va-vb);
+    return sortDir*String(va).localeCompare(String(vb),'th');
+  });
+}
+function sortIcon(col) {
+  if(sortCol!==col) return '<i class="sort-icon">↕</i>';
+  return `<i class="sort-icon">${sortDir===1?'↑':'↓'}</i>`;
+}
+function onSort(col) {
+  if(sortCol===col) sortDir*=-1; else {sortCol=col;sortDir=1;}
+  renderStaffList(DATA.locations.find(l=>l.id===currentLoc));
+}
+function computeNet(loc) {
+  let rows=[],cur=loc.licensed;
+  for(let i=0;i<YEARS_CE.length;i++) {
+    const nc=loc.newCtrl[i]||0,ret=loc.retire[i]||0,net=nc-ret;
+    rows.push({year:YEARS_CE[i],nc,ret,net,end:cur+net}); cur+=net;
+  }
+  return rows;
+}
+function destroyCharts() {
+  activeCharts.forEach(c=>c.destroy());
+  activeCharts=[];
+}
+function mkChart(id,cfg) {
+  const c = new Chart(document.getElementById(id).getContext('2d'),cfg);
+  activeCharts.push(c); return c;
+}
+function fmtDate(d) {
+  if(!d) return '—';
+  const dt=new Date(d);
+  return dt.toLocaleDateString('th-TH',{year:'2-digit',month:'short',day:'numeric'});
+}
+function durMonths(s,e) {
+  if(!s||!e) return '—';
+  return Math.round((new Date(e)-new Date(s))/86400000/30.4)+' เดือน';
+}
+
+// ═══════════════════════════════════════════
+// PAGE SWITCHING
+// ═══════════════════════════════════════════
+function switchPage(id, btn) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  btn.classList.add('active');
+  if(id==='overview') renderOverview();
+  if(id==='location') renderLocationPage();
+  if(id==='course') renderCoursePage();
+}
+
+// ═══════════════════════════════════════════
+// PAGE 1: OVERVIEW
+// ═══════════════════════════════════════════
+function renderOverview() {
+  destroyCharts();
+  const D = DATA;
+  const np = D.net_projection;
+  const pg = D.projection;
+  const ra = D.retire_all;
+  const locs = D.locations;
+  const maxLic = Math.max(...locs.map(l=>l.licensed));
+  const maxTotal = Math.max(...locs.map(l=>l.licensed+l.pipeline));
+  const dividers = {'sk':'ส่วนกลาง','sn':'ภาค 1 (บภ 1.)','sc':'ภาค 2 (บภ 2.)'};
+
+  let locRows='';
+  locs.forEach(loc=>{
+    if(dividers[loc.id]) locRows+=`<tr class="loc-divider"><td colspan="2">${dividers[loc.id]}</td></tr>`;
+    const lp=maxLic>0?Math.round(loc.licensed/maxLic*100):0;
+    const sp=maxLic>0?Math.round(loc.students/maxLic*100):0;
+    const z=loc.licensed===0&&loc.students===0?'style="opacity:0.4"':'';
+    locRows+=`<tr ${z}>
+      <td class="loc-name">${loc.name}${loc.noData?' <span style="font-size:10px;color:#475569">ไม่มีข้อมูล</span>':''}</td>
+      <td style="width:100%;padding:4px 8px;">
+        <div style="margin-bottom:3px;"><div class="loc-bar-wrap"><div class="loc-bar" style="width:${lp}%;background:rgba(59,130,246,0.7)"><span style="color:#bfdbfe;font-size:10px;font-family:var(--mono)">${loc.licensed>0?loc.licensed:''}</span></div></div></div>
+        <div><div class="loc-bar-wrap"><div class="loc-bar" style="width:${sp}%;background:rgba(245,158,11,0.65)"><span style="color:#fef3c7;font-size:10px;font-family:var(--mono)">${loc.students>0?loc.students:''}</span></div></div></div>
+      </td>
+    </tr>`;
+  });
+
+  let projCards=''; let cumul=D.licensed_total;
+  const maxP=Math.max(...pg.map(p=>p.newCtrl+p.ratingExp));
+  pg.forEach(p=>{
+    const total=p.newCtrl+p.ratingExp; cumul+=p.newCtrl;
+    const np2=Math.round(p.newCtrl/maxP*100), ep=Math.round(p.ratingExp/maxP*100);
+    projCards+=`<div class="proj-year">
+      <div class="proj-yr">${p.year}</div>
+      <div class="proj-total">${total}</div>
+      <div class="proj-breakdown">
+        <div class="proj-item"><span class="lbl">Controller ใหม่</span><span class="val-new">${p.newCtrl}</span></div>
+        <div class="proj-item"><span class="lbl">Rating เพิ่ม</span><span class="val-exp">${p.ratingExp}</span></div>
+      </div>
+      <div style="height:3px;background:rgba(255,255,255,0.06);border-radius:2px;margin-top:8px;display:flex;">
+        <div style="width:${np2}%;background:#f59e0b;border-radius:2px 0 0 2px;"></div>
+        <div style="width:${ep}%;background:#a78bfa;border-radius:0 2px 2px 0;"></div>
+      </div>
+      <div style="font-size:10px;color:#64748b;margin-top:5px;">สะสม ${cumul} คน</div>
+    </div>`;
+  });
+
+  let netTblRows='';
+  np.slice(0,7).forEach(r=>{
+    const nc=r.net>0?'#6ee7b7':r.net<0?'#fca5a5':'#94a3b8';
+    netTblRows+=`<tr>
+      <td>${r.year}${r.nc===0&&r.year>=2030?' <span style="font-size:9px;color:#ef4444">ไม่มีแผน</span>':''}</td>
+      <td style="color:#6ee7b7">+${r.nc}</td><td style="color:#fca5a5">−${r.ret}</td>
+      <td style="color:${nc};font-weight:600">${r.net>=0?'+':''}${r.net}</td>
+      <td style="font-weight:600;color:#e2e8f0">${r.end}</td>
+    </tr>`;
+  });
+
+  let gapRows='';
+  locs.forEach(loc=>{
+    const lp=maxTotal>0?Math.round(loc.licensed/maxTotal*100):0;
+    const pp=maxTotal>0?Math.round(loc.pipeline/maxTotal*100):0;
+    gapRows+=`<div class="gap-row">
+      <div class="gap-loc">${loc.name}</div>
+      <div style="flex:1;">
+        <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px;"><div style="height:12px;width:${lp}%;background:rgba(59,130,246,0.75);border-radius:2px;min-width:2px;"></div><span style="font-size:10px;color:#93c5fd;font-family:var(--mono)">${loc.licensed}</span></div>
+        <div style="display:flex;align-items:center;gap:4px;"><div style="height:8px;width:${pp}%;background:rgba(245,158,11,0.6);border-radius:2px;min-width:${loc.pipeline>0?'2px':'0'};"></div>${loc.pipeline>0?`<span style="font-size:10px;color:#fcd34d;font-family:var(--mono)">${loc.pipeline}</span>`:'<span style="font-size:10px;color:#374151">—</span>'}</div>
+      </div>
+      <div style="width:50px;text-align:right;"><div style="font-size:12px;font-family:var(--mono);color:#f1f5f9;">${loc.licensed+loc.pipeline}</div><div style="font-size:10px;color:var(--muted)">รวม</div></div>
+    </div>`;
+  });
+
+  document.getElementById('page-overview').innerHTML = `
+    <div class="insight-box">
+      <strong>โครงสร้าง ATC Student:</strong> ส่วนกลาง (ศก., ศจ., ศบ.) — เจ้าหน้าที่ฝึกหัด <strong>Lv.7</strong> · ภูมิภาค — นักเรียนฝึกหัด <strong>Lv.5</strong> · ทั้งสองกลุ่มยังไม่มี Licence · <strong>Lv.6/8</strong> = มี Licence กำลังขยาย Rating
+    </div>
+    <div class="kpi-row-4">
+      <div class="kpi c-blue"><div class="kpi-label">ATCO มี Licence</div><div class="kpi-value">${D.licensed_total}</div><div class="kpi-sub">ณ เมษายน 2026</div></div>
+      <div class="kpi c-amber"><div class="kpi-label">ATC Student</div><div class="kpi-value">${D.students_total}</div><div class="kpi-sub">Lv.7 ส่วนกลาง · Lv.5 ภูมิภาค</div></div>
+      <div class="kpi c-green"><div class="kpi-label">Controller ใหม่ 4 ปี</div><div class="kpi-value">${D.pipeline_4yr}</div><div class="kpi-sub">Lv.5+7 ปี 2026–2029</div></div>
+      <div class="kpi c-red"><div class="kpi-label">เกษียณ 4 ปี (2026–29)</div><div class="kpi-value">${D.retire_4yr}</div><div class="kpi-sub">Net +${D.pipeline_4yr-D.retire_4yr} คน</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title"><div class="card-title-left"><span class="cdot" style="background:var(--blue)"></span>อัตรากำลังรายสังกัด</div></div>
+        <div class="legend">
+          <div class="legend-item"><div class="ldot" style="background:#3b82f6"></div>ATCO มี Licence</div>
+          <div class="legend-item"><div class="ldot" style="background:#f59e0b"></div>ATC Student (Lv.5+7)</div>
+        </div>
+        <table class="loc-table">${locRows}</table>
+      </div>
+      <div class="card">
+        <div class="card-title"><div class="card-title-left"><span class="cdot" style="background:var(--green)"></span>สัดส่วนภาพรวม</div></div>
+        <div class="donut-wrap">
+          <canvas id="ov-donut" width="160" height="160"></canvas>
+          <div class="donut-center">
+            <div style="font-size:20px;font-weight:600;font-family:var(--mono);color:#f1f5f9">${D.licensed_total+D.students_total}</div>
+            <div style="font-size:10px;color:var(--muted)">บุคลากรทั้งหมด</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;">
+            <div style="display:flex;align-items:center;gap:6px;"><div class="ldot" style="background:#3b82f6;width:9px;height:9px;border-radius:2px"></div>ATCO มี Licence</div>
+            <span style="font-family:var(--mono);color:#93c5fd">${D.licensed_total} <span style="font-size:10px;color:var(--muted)">(82.4%)</span></span>
+          </div>
+          <div class="divider"></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px;">
+            <div style="display:flex;align-items:center;gap:6px;"><div class="ldot" style="background:#f59e0b;width:9px;height:9px;border-radius:2px"></div>เจ้าหน้าที่ฝึกหัด Lv.7 <span class="cat-tag cat-new">ส่วนกลาง</span></div>
+            <span style="font-family:var(--mono);color:#fcd34d">${D.locations.find(l=>l.id==='sj').lv7 + D.locations.find(l=>l.id==='sk').lv7 + D.locations.find(l=>l.id==='sb').lv7}</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px;">
+            <div style="display:flex;align-items:center;gap:6px;"><div class="ldot" style="background:#10b981;width:9px;height:9px;border-radius:2px"></div>นักเรียนฝึกหัด Lv.5 <span class="cat-tag" style="background:rgba(16,185,129,0.15);color:#6ee7b7">ภูมิภาค</span></div>
+            <span style="font-family:var(--mono);color:#6ee7b7">${D.students_total - (D.locations.find(l=>l.id==='sj').lv7 + D.locations.find(l=>l.id==='sk').lv7 + D.locations.find(l=>l.id==='sb').lv7)}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:14px;">
+      <div class="card-title"><div class="card-title-left"><span class="cdot" style="background:var(--green)"></span>คาดการณ์การเพิ่มขึ้นของ ATCO จากแผนฝึกอบรม (แยกประเภท)</div></div>
+      <div class="proj-grid">${projCards}</div>
+      <div class="chart-wrap" style="height:150px;"><canvas id="ov-proj"></canvas></div>
+      <div class="note-box"><strong>Controller ใหม่</strong> = Lv.5+7 ยังไม่มี Licence · <strong>Rating เพิ่มเติม</strong> = Lv.6+8 มี Licence แล้ว</div>
+    </div>
+    <div class="grid-2" style="margin-bottom:14px;">
+      <div class="card">
+        <div class="card-title"><div class="card-title-left"><span class="cdot" style="background:var(--blue)"></span>กราฟ Net Headcount 2026–2032 (หักเกษียณ)</div></div>
+        <div class="legend">
+          <div class="legend-item"><div class="ldot" style="background:#3b82f6"></div>Net Headcount</div>
+          <div class="legend-item"><div class="ldot" style="background:#10b981"></div>Controller ใหม่</div>
+          <div class="legend-item"><div class="ldot" style="background:#ef4444"></div>เกษียณ</div>
+        </div>
+        <div class="chart-wrap" style="height:220px;"><canvas id="ov-net"></canvas></div>
+        <div class="warn-box">⚠ หลังปี 2029 ยังไม่มีแผน Controller ใหม่ อัตรากำลังจะลดลง −27 ถึง −38 คนต่อปี</div>
+      </div>
+      <div>
+        <div class="card" style="margin-bottom:14px;">
+          <div class="card-title"><div class="card-title-left"><span class="cdot" style="background:var(--purple)"></span>ตาราง Net Projection</div></div>
+          <table class="net-tbl">
+            <thead><tr><th>ปี (ค.ศ.)</th><th>+ใหม่</th><th>−เกษียณ</th><th>Net</th><th>ปลายปี</th></tr></thead>
+            <tbody>${netTblRows}</tbody>
+          </table>
+        </div>
+        <div class="card">
+          <div class="card-title"><div class="card-title-left"><span class="cdot" style="background:var(--red)"></span>จำนวนเกษียณรายปี</div></div>
+          <div class="chart-wrap" style="height:160px;"><canvas id="ov-retire"></canvas></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><div class="card-title-left"><span class="cdot" style="background:var(--amber)"></span>Gap Analysis · Licence vs Pipeline</div></div>
+      <div class="legend">
+        <div class="legend-item"><div class="ldot" style="background:#3b82f6"></div>ATCO มี Licence</div>
+        <div class="legend-item"><div class="ldot" style="background:#f59e0b"></div>Pipeline (Controller ใหม่)</div>
+      </div>
+      ${gapRows}
+    </div>
+  `;
+
+  // Charts
+  mkChart('ov-donut',{type:'doughnut',data:{datasets:[{data:[D.licensed_total,D.locations.find(l=>l.id==='sj').lv7+D.locations.find(l=>l.id==='sk').lv7+D.locations.find(l=>l.id==='sb').lv7,D.students_total-(D.locations.find(l=>l.id==='sj').lv7+D.locations.find(l=>l.id==='sk').lv7+D.locations.find(l=>l.id==='sb').lv7)],backgroundColor:['#3b82f6','#f59e0b','#10b981'],borderColor:['#1e2335','#1e2335','#1e2335'],borderWidth:3,hoverOffset:4}]},options:{responsive:false,cutout:'72%',plugins:{legend:{display:false},tooltip:{enabled:false}},animation:{animateRotate:true,duration:800}}});
+  mkChart('ov-proj',{type:'bar',data:{labels:pg.map(p=>String(p.year)),datasets:[{label:'Controller ใหม่ (Lv.5+7)',data:pg.map(p=>p.newCtrl),backgroundColor:'rgba(245,158,11,0.75)',borderColor:'#f59e0b',borderWidth:1,borderRadius:4},{label:'Rating เพิ่มเติม (Lv.6+8)',data:pg.map(p=>p.ratingExp),backgroundColor:'rgba(167,139,250,0.6)',borderColor:'#a78bfa',borderWidth:1,borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:'#64748b',font:{size:11},boxWidth:10,boxHeight:10}},tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${ctx.raw} คน`}}},scales:{x:{stacked:true,grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#64748b',font:{size:11}}},y:{stacked:true,grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#64748b',font:{size:11}},beginAtZero:true}}}});
+  mkChart('ov-net',{type:'line',data:{labels:np.map(p=>String(p.year)),datasets:[{label:'Net Headcount',data:np.map(p=>p.end),borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,0.07)',borderWidth:2.5,pointRadius:5,pointBackgroundColor:'#3b82f6',fill:true,tension:0.3,yAxisID:'y'},{label:'Controller ใหม่',data:np.map(p=>p.nc),borderColor:'#10b981',backgroundColor:'transparent',borderWidth:1.5,pointRadius:3,pointBackgroundColor:'#10b981',borderDash:[4,3],tension:0.3,yAxisID:'y2'},{label:'เกษียณ',data:np.map(p=>p.ret),borderColor:'#ef4444',backgroundColor:'transparent',borderWidth:1.5,pointRadius:3,pointBackgroundColor:'#ef4444',borderDash:[2,3],tension:0.3,yAxisID:'y2'}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${ctx.raw} คน`}}},scales:{x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#64748b',font:{size:11}}},y:{position:'left',grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#93c5fd',font:{size:10}},title:{display:true,text:'Net Headcount',color:'#64748b',font:{size:10}},min:800},y2:{position:'right',grid:{drawOnChartArea:false},ticks:{color:'#64748b',font:{size:10}},beginAtZero:true}}}});
+  mkChart('ov-retire',{type:'bar',data:{labels:ra.map(r=>String(r.year)),datasets:[{label:'เกษียณ',data:ra.map(r=>r.v),backgroundColor:ra.map((_,i)=>i<4?'rgba(239,68,68,0.75)':'rgba(239,68,68,0.3)'),borderColor:'#ef4444',borderWidth:1,borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#64748b',font:{size:10}}},y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#64748b',font:{size:10}},beginAtZero:true}}}});
+}
+
+// ═══════════════════════════════════════════
+// PAGE 2: LOCATION
+// ═══════════════════════════════════════════
+function renderLocationPage() {
+  destroyCharts();
+  // Build location selector
+  const sel = document.getElementById('locSelector');
+  if(sel.children.length===0) {
+    DATA.locations.forEach(loc=>{
+      const b=document.createElement('button');
+      b.className='loc-btn'+(loc.noData?' no-data':'')+(loc.id===currentLoc?' active':'');
+      b.textContent=loc.name; b.dataset.id=loc.id;
+      if(!loc.noData) b.onclick=()=>selectLoc(loc.id);
+      sel.appendChild(b);
+    });
+  }
+  renderLoc(DATA.locations.find(l=>l.id===currentLoc));
+}
+
+function selectLoc(id) {
+  currentLoc=id; searchVal=''; filterRet='all'; sortCol=''; sortDir=1; currentTab='licensed';
+  document.querySelectorAll('.loc-btn').forEach(b=>b.classList.toggle('active',b.dataset.id===id));
+  destroyCharts();
+  renderLoc(DATA.locations.find(l=>l.id===id));
+}
+
+function renderLoc(loc) {
+  if(loc.noData) {
+    document.getElementById('locContent').innerHTML=`<div class="no-data-msg">ยังไม่มีข้อมูลสำหรับ ${loc.name} ในระบบ</div>`;
+    return;
+  }
+  const netRows=computeNet(loc);
+  const ret4=loc.retire.slice(0,4).reduce((a,b)=>a+b,0);
+  const new4=loc.newCtrl.slice(0,4).reduce((a,b)=>a+b,0);
+  const net4=new4-ret4;
+  const lF=loc.roles.full,lA1=loc.roles.atc1,lA23=loc.roles.atc2_3;
+
+  let alertHtml='';
+  if(loc.pipeline===0&&loc.licensed<30) alertHtml+=`<div class="alert alert-red"><strong>⚠ ความเสี่ยงสูง:</strong> ไม่มีแผนฝึก Controller ใหม่ และอัตรากำลังต่ำ</div>`;
+  else if(net4<0) alertHtml+=`<div class="alert alert-amber"><strong>⚠ Net ติดลบ:</strong> 4 ปีข้างหน้าลดสุทธิ ${net4} คน</div>`;
+  else if(net4>10) alertHtml+=`<div class="alert alert-green"><strong>✓ Pipeline ดี:</strong> คาดเพิ่มสุทธิ +${net4} คนใน 4 ปี</div>`;
+  const specAlerts=loc.tpStatus.filter(s=>s.label!=='-');
+  if(specAlerts.length>0) {
+    const sc=specAlerts.reduce((a,b)=>a+b.count,0);
+    alertHtml+=`<div class="alert alert-amber" style="margin-top:6px;"><strong>⚠ สถานะพิเศษ ${sc} คน:</strong> ${specAlerts.map(s=>`${s.label} (${s.count})`).join(' · ')}</div>`;
+  }
+
+  let netTbl='';
+  netRows.slice(0,7).forEach(r=>{
+    const nc=r.net>0?'#6ee7b7':r.net<0?'#fca5a5':'#94a3b8';
+    netTbl+=`<tr><td>${r.year}${r.nc===0&&r.year>=2030?' <span style="font-size:9px;color:#ef4444">ไม่มีแผน</span>':''}</td><td style="color:#6ee7b7">+${r.nc}</td><td style="color:#fca5a5">−${r.ret}</td><td style="color:${nc};font-weight:600">${r.net>=0?'+':''}${r.net}</td><td style="font-weight:600;color:#e2e8f0">${r.end}</td></tr>`;
+  });
+
+  const stuLen=(DATA.staff_students[loc.id]||[]).length;
+  const licLen=(DATA.staff_licensed[loc.id]||[]).length;
+
+  document.getElementById('locContent').innerHTML=`
+    <div style="margin-bottom:12px;">
+      <div style="font-size:14px;font-weight:600;color:#f1f5f9;margin-bottom:8px;">${loc.full}</div>
+      ${alertHtml}
+    </div>
+    <div class="kpi-row">
+      <div class="kpi c-blue"><div class="kpi-label">Licensed ATCO</div><div class="kpi-value">${loc.licensed}</div><div class="kpi-sub">มี Licence</div></div>
+      <div class="kpi c-amber"><div class="kpi-label">ATC Student</div><div class="kpi-value">${loc.students}</div><div class="kpi-sub">Trainee ทั้งหมด</div></div>
+      <div class="kpi c-green"><div class="kpi-label">Pipeline 4 ปี</div><div class="kpi-value">${new4}</div><div class="kpi-sub">คาดได้ Rating 2026–2029</div></div>
+      <div class="kpi c-red"><div class="kpi-label">เกษียณ 4 ปี</div><div class="kpi-value">${ret4}</div><div class="kpi-sub">2026–2029</div></div>
+      <div class="kpi c-purple"><div class="kpi-label">Net 4 ปี</div><div class="kpi-value">${net4>=0?'+':''}${net4}</div><div class="kpi-sub">คาดปี 2030: ${netRows[4].end} คน</div></div>
+    </div>
+    <div class="grid-2" style="margin-bottom:12px;">
+      <div class="card">
+        <div class="card-title"><div class="card-title-left"><span class="cdot" style="background:var(--blue)"></span>Net Headcount 2026–2035</div></div>
+        <div class="legend">
+          <div class="legend-item"><div class="ldot" style="background:var(--blue)"></div>Net Headcount</div>
+          <div class="legend-item"><div class="ldot" style="background:var(--green)"></div>Controller ใหม่</div>
+          <div class="legend-item"><div class="ldot" style="background:var(--red)"></div>เกษียณ</div>
+        </div>
+        <div class="chart-wrap" style="height:200px;"><canvas id="loc-net"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><div class="card-title-left"><span class="cdot" style="background:var(--purple)"></span>ตาราง Net Projection</div></div>
+        <table class="net-tbl">
+          <thead><tr><th>ปี (ค.ศ.)</th><th>+ใหม่</th><th>−เกษียณ</th><th>Net</th><th>ปลายปี</th></tr></thead>
+          <tbody>${netTbl}</tbody>
+        </table>
+      </div>
+    </div>
+    <div class="grid-3" style="margin-bottom:12px;">
+      <div class="card">
+        <div class="card-title"><div class="card-title-left"><span class="cdot" style="background:var(--purple)"></span>สัดส่วนตำแหน่ง</div></div>
+        <div class="donut-wrap" style="height:130px;">
+          <canvas id="loc-role" width="130" height="130"></canvas>
+          <div class="donut-center">
+            <div style="font-size:18px;font-weight:600;font-family:var(--mono);color:#f1f5f9">${loc.licensed}</div>
+            <div style="font-size:10px;color:var(--muted)">Licensed</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px;margin-top:8px;">
+          <div style="display:flex;justify-content:space-between;font-size:11px;"><div style="display:flex;align-items:center;gap:5px;"><div class="ldot" style="background:#3b82f6;width:7px;height:7px;border-radius:1px"></div><span style="color:var(--muted)">ผจก./Full Rating</span></div><span style="font-family:var(--mono);color:#93c5fd;">${lF} <span style="color:var(--muted);font-size:10px;">(${loc.licensed?Math.round(lF/loc.licensed*100):0}%)</span></span></div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;"><div style="display:flex;align-items:center;gap:5px;"><div class="ldot" style="background:#10b981;width:7px;height:7px;border-radius:1px"></div><span style="color:var(--muted)">ATC ๑</span></div><span style="font-family:var(--mono);color:#6ee7b7;">${lA1}</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;"><div style="display:flex;align-items:center;gap:5px;"><div class="ldot" style="background:#f59e0b;width:7px;height:7px;border-radius:1px"></div><span style="color:var(--muted)">ATC ๒/๓</span></div><span style="font-family:var(--mono);color:#fcd34d;">${lA23}</span></div>
+          <div class="divider"></div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;"><span style="color:var(--muted)">อายุงานเฉลี่ย</span><span style="font-family:var(--mono);color:#e2e8f0;">${loc.avgSen} ปี</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><div class="card-title-left"><span class="cdot" style="background:var(--red)"></span>จำนวนเกษียณรายปี</div></div>
+        <div class="chart-wrap" style="height:150px;"><canvas id="loc-retire"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><div class="card-title-left"><span class="cdot" style="background:var(--amber)"></span>ATC Student / Trainee</div></div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--muted)">ATC Student ทั้งหมด</span><span style="font-family:var(--mono);font-weight:600;color:#fcd34d;">${loc.students} คน</span></div>
+          <div style="height:4px;border-radius:2px;background:rgba(245,158,11,0.6);width:100%;"></div>
+          <div class="divider"></div>
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:2px;">หลักสูตรที่ฝึก</div>
+          ${loc.courses.length>0?loc.courses.map(c=>`<div style="font-size:11px;color:#94a3b8;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.03);">${c}</div>`).join(''):'<div style="font-size:11px;color:var(--muted);">ไม่มีข้อมูลหลักสูตร</div>'}
+          ${specAlerts.length>0?`<div class="divider"></div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:2px;">สถานะพิเศษ</div>${specAlerts.map(s=>`<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0;"><span style="color:#94a3b8;">${s.label}</span><span class="pill pill-amber">${s.count} คน</span></div>`).join('')}`:''}</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><div class="card-title-left"><span class="cdot" style="background:var(--amber)"></span>รายชื่อบุคลากร</div><span class="count-badge" id="countBadge"></span></div>
+      <div class="tabs">
+        <button class="tab-btn active" id="tab-lic" onclick="switchTab('licensed')">Licensed Controller (${licLen})</button>
+        <button class="tab-btn" id="tab-stu" onclick="switchTab('student')">ATC Student / Trainee (${stuLen})</button>
+      </div>
+      <div class="filter-bar">
+        <input type="text" id="searchInput" placeholder="🔍 ค้นหาชื่อ-นามสกุล..." oninput="onSearch(this.value)">
+        <select class="filter-sel" id="filterRet" onchange="onFilterRet(this.value)"></select>
+      </div>
+      <div id="staffListArea"></div>
+    </div>
+  `;
+
+  updateFilterBar();
+  renderStaffList(loc);
+
+  mkChart('loc-net',{type:'line',data:{labels:YEARS_CE.map(String),datasets:[{label:'Net Headcount',data:netRows.map(r=>r.end),borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,0.07)',borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#3b82f6',fill:true,tension:0.3,yAxisID:'y'},{label:'Controller ใหม่',data:loc.newCtrl,borderColor:'#10b981',backgroundColor:'transparent',borderWidth:1.5,pointRadius:3,pointBackgroundColor:'#10b981',borderDash:[4,3],tension:0.3,yAxisID:'y2'},{label:'เกษียณ',data:loc.retire,borderColor:'#ef4444',backgroundColor:'transparent',borderWidth:1.5,pointRadius:3,pointBackgroundColor:'#ef4444',borderDash:[2,3],tension:0.3,yAxisID:'y2'}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#64748b',font:{size:10}}},y:{position:'left',grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#93c5fd',font:{size:9}},title:{display:true,text:'Net HC',color:'#64748b',font:{size:9}}},y2:{position:'right',grid:{drawOnChartArea:false},ticks:{color:'#64748b',font:{size:9}},beginAtZero:true}}}});
+  mkChart('loc-role',{type:'doughnut',data:{datasets:[{data:[lF,lA1,lA23],backgroundColor:['#3b82f6','#10b981','#f59e0b'],borderColor:['#1e2335','#1e2335','#1e2335'],borderWidth:3,hoverOffset:3}]},options:{responsive:false,cutout:'68%',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>[' ผจก./Full','ATC ๑','ATC ๒/๓'][ctx.dataIndex]+': '+ctx.raw+' คน'}}},animation:{duration:600}}});
+  mkChart('loc-retire',{type:'bar',data:{labels:YEARS_CE.slice(0,8).map(String),datasets:[{label:'เกษียณ',data:loc.retire.slice(0,8),backgroundColor:loc.retire.slice(0,8).map((_,i)=>i<4?'rgba(239,68,68,0.75)':'rgba(239,68,68,0.3)'),borderColor:'#ef4444',borderWidth:1,borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#64748b',font:{size:9}}},y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#64748b',font:{size:9}},beginAtZero:true}}}});
+}
+
+function updateFilterBar() {
+  const isLic=currentTab==='licensed';
+  const el=document.getElementById('filterRet');
+  if(!el) return;
+  el.innerHTML = isLic
+    ? '<option value="all">ทุกปีเกษียณ</option><option value="soon">เกษียณ ≤ 2029</option><option value="mid">2030–2037</option><option value="late">> 2037</option>'
+    : '<option value="all">ทุกสถานะ Rating</option><option value="soon">ได้ Rating ≤ 2027</option><option value="mid">2028–2030</option><option value="late">> 2030</option><option value="none">ยังไม่มีวันคาดการณ์</option>';
+  el.value=filterRet;
+}
+
+function renderStaffList(loc) {
+  const isLic=currentTab==='licensed';
+  const raw=isLic?(DATA.staff_licensed[loc.id]||[]):(DATA.staff_students[loc.id]||[]);
+  let data=raw.filter(r=>{
+    const q=searchVal.toLowerCase();
+    if(q&&!r.name.toLowerCase().includes(q)) return false;
+    if(isLic) {
+      const yr=r.ret;
+      if(filterRet==='soon'&&!(yr<=2029)) return false;
+      if(filterRet==='mid'&&!(yr>=2030&&yr<=2037)) return false;
+      if(filterRet==='late'&&!(yr>2037)) return false;
+    } else {
+      const yr=r.rating;
+      if(filterRet==='soon'&&!(yr&&yr<=2027)) return false;
+      if(filterRet==='mid'&&!(yr&&yr>=2028&&yr<=2030)) return false;
+      if(filterRet==='late'&&!(yr&&yr>2030)) return false;
+      if(filterRet==='none'&&yr) return false;
+    }
+    return true;
+  });
+  data=sortData(data, sortCol||(isLic?'ret':'name'));
+  const el=document.getElementById('staffListArea');
+  if(!el) return;
+  document.getElementById('countBadge').textContent=`${data.length} คน`;
+  if(data.length===0) { el.innerHTML='<div class="no-data-msg">ไม่พบข้อมูล</div>'; return; }
+  if(isLic) {
+    el.innerHTML=`<div class="staff-list"><table class="staff-tbl">
+      <thead><tr>
+        <th class="row-num">#</th>
+        <th class="${sortCol==='name'?'sorted':''}" onclick="onSort('name')">ชื่อ-นามสกุล <i class="sort-icon">${sortCol==='name'?(sortDir===1?'↑':'↓'):'↕'}</i></th>
+        <th class="${sortCol==='pos'?'sorted':''}" onclick="onSort('pos')">ตำแหน่ง <i class="sort-icon">${sortCol==='pos'?(sortDir===1?'↑':'↓'):'↕'}</i></th>
+        <th class="${sortCol==='ret'?'sorted':''}" onclick="onSort('ret')" style="text-align:right">เกษียณ (ค.ศ.) <i class="sort-icon">${sortCol==='ret'?(sortDir===1?'↑':'↓'):'↕'}</i></th>
+      </tr></thead>
+      <tbody>${data.map((r,i)=>`<tr><td class="row-num">${i+1}</td><td style="color:#e2e8f0">${r.name}</td><td>${posTag(r.pos)}</td><td class="${r.ret<=2029?'retire-soon':''}" style="font-family:var(--mono);font-size:11px;text-align:right">${r.ret}</td></tr>`).join('')}</tbody>
+    </table></div>`;
+  } else {
+    el.innerHTML=`<div class="staff-list"><table class="staff-tbl">
+      <thead><tr>
+        <th class="row-num">#</th>
+        <th class="${sortCol==='name'?'sorted':''}" onclick="onSort('name')">ชื่อ-นามสกุล <i class="sort-icon">${sortCol==='name'?(sortDir===1?'↑':'↓'):'↕'}</i></th>
+        <th>ระดับ</th>
+        <th class="${sortCol==='course'?'sorted':''}" onclick="onSort('course')">หลักสูตร <i class="sort-icon">${sortCol==='course'?(sortDir===1?'↑':'↓'):'↕'}</i></th>
+        <th class="${sortCol==='rating'?'sorted':''}" onclick="onSort('rating')" style="text-align:right">คาดได้ Rating (ค.ศ.) <i class="sort-icon">${sortCol==='rating'?(sortDir===1?'↑':'↓'):'↕'}</i></th>
+        <th class="${sortCol==='status'?'sorted':''}" onclick="onSort('status')">สถานะ <i class="sort-icon">${sortCol==='status'?(sortDir===1?'↑':'↓'):'↕'}</i></th>
+      </tr></thead>
+      <tbody>${data.map((r,i)=>`<tr><td class="row-num">${i+1}</td><td style="color:#e2e8f0">${r.name}</td><td>${lvTag(r.lv)}</td><td style="font-size:11px;color:#94a3b8;">${r.course||'—'}</td><td style="font-family:var(--mono);font-size:11px;color:${r.rating?'#6ee7b7':'#64748b'};text-align:right">${r.rating||'—'}</td><td>${statusTag(r.status)}</td></tr>`).join('')}</tbody>
+    </table></div>`;
+  }
+}
+
+function switchTab(tab) {
+  currentTab=tab; sortCol=''; sortDir=1; searchVal=''; filterRet='all';
+  document.getElementById('tab-lic').classList.toggle('active',tab==='licensed');
+  document.getElementById('tab-stu').classList.toggle('active',tab==='student');
+  document.getElementById('searchInput').value='';
+  updateFilterBar();
+  renderStaffList(DATA.locations.find(l=>l.id===currentLoc));
+}
+function onSearch(v){searchVal=v;renderStaffList(DATA.locations.find(l=>l.id===currentLoc));}
+function onFilterRet(v){filterRet=v;renderStaffList(DATA.locations.find(l=>l.id===currentLoc));}
+
+// ═══════════════════════════════════════════
+// PAGE 3: COURSE
+// ═══════════════════════════════════════════
+const COURSES = [
+  {code:'ACS (Surv.)',name:'Area Control Surveillance — BACC Unit Endorsement',sangkad:'ศจ.',level:7,count:24,theory_start:'2024-10-06',theory_end:'2024-11-28',ojt_start:'2025-02-28',ojt_end:'2025-09-29',rating:'2026-08-31',progress:90},
+  {code:'ACS (Surv. R)',name:'Area Control Surveillance Rating',sangkad:'ศจ.',level:7,count:24,theory_start:'2025-03-02',theory_end:'2025-04-29',ojt_start:'2025-05-31',ojt_end:'2026-02-27',rating:'2026-07-31',progress:95},
+  {code:'ACP',name:'Area Control Procedural — BACC Unit Endorsement',sangkad:'ศจ.',level:7,count:26,theory_start:'2025-10-19',theory_end:'2026-01-08',ojt_start:'2026-01-09',ojt_end:'2026-12-30',rating:'2028-01-30',progress:35},
+  {code:'Senior ACP',name:'Senior ATC: Area Control Procedural Rating',sangkad:'ศจ.',level:8,count:12,theory_start:'2026-03-01',theory_end:'2026-04-29',ojt_start:'2026-04-30',ojt_end:null,rating:'2027-03-31',progress:15},
+  {code:'ADV/ADI-VTSG',name:'Aerodrome Control: Unit Endorsement (Krabi)',sangkad:'ศภ.บภ 1.',level:5,count:9,theory_start:'2024-03-24',theory_end:'2024-09-15',ojt_start:'2025-11-09',ojt_end:'2026-03-28',rating:'2026-09-13',progress:80},
+  {code:'ADV/ADI-VTSP',name:'Aerodrome Control: Unit Endorsement (Phuket)',sangkad:'ศภ.บภ 1.',level:5,count:16,theory_start:'2026-05-17',theory_end:null,ojt_start:null,ojt_end:null,rating:null,progress:5},
+  {code:'APP-CR',name:'Approach Control Procedural (Chiang Rai Sector)',sangkad:'ศบ.',level:7,count:8,theory_start:'2022-05-08',theory_end:'2027-02-25',ojt_start:'2023-02-28',ojt_end:'2028-02-29',rating:'2026-04-09',progress:65},
+  {code:'ADV/ADI-VTCT',name:'Aerodrome Control: Unit Endorsement (Chiang Rai)',sangkad:'ศช.บภ 2.',level:5,count:6,theory_start:'2023-02-11',theory_end:'2024-02-13',ojt_start:'2025-10-03',ojt_end:'2026-01-08',rating:'2026-05-31',progress:98},
+  {code:'ADC-VTSM',name:'Aerodrome Control Rating (Samui Airport)',sangkad:'ศร.บภ 1.',level:5,count:4,theory_start:'2026-07-05',theory_end:'2026-09-17',ojt_start:'2026-09-27',ojt_end:'2026-12-31',rating:'2027-05-31',progress:10},
+  {code:'ADC-Nan/SKT',name:'Aerodrome Control — Nan & Sukhothai',sangkad:'ศล.บภ 2.',level:5,count:6,theory_start:'2025-01-15',theory_end:'2025-06-30',ojt_start:'2025-07-01',ojt_end:'2026-06-30',rating:'2026-08-31',progress:85},
+  {code:'ADC-UBL',name:'Aerodrome Control — Ubon Ratchathani',sangkad:'ศบ.บภ 2.',level:5,count:2,theory_start:'2025-06-01',theory_end:'2025-11-30',ojt_start:'2025-12-01',ojt_end:null,rating:null,progress:20},
+  {code:'ADC-BRM',name:'Aerodrome Control — Buri Ram & Korat',sangkad:'ศม.บภ 2.',level:5,count:5,theory_start:'2025-09-01',theory_end:'2026-02-28',ojt_start:'2026-03-01',ojt_end:'2026-10-31',rating:'2026-12-31',progress:55},
+];
+
+const GANTT_START=new Date('2024-01-01'), GANTT_END=new Date('2030-01-01');
+const TOTAL_DAYS=(GANTT_END-GANTT_START)/86400000;
+function dayOffset(d){return d?Math.max(0,(new Date(d)-GANTT_START)/86400000/TOTAL_DAYS*100):null;}
+function dayWidth(s,e){return(s&&e)?Math.max(0.5,(new Date(e)-new Date(s))/86400000/TOTAL_DAYS*100):0;}
+function progressColor(p){return p>=80?'#10b981':p>=40?'#3b82f6':'#f59e0b';}
+
+let selectedCourse=-1;
+
+function renderCoursePage(){
+  destroyCharts();
+  const D=DATA;
+  const totalStudents=COURSES.reduce((a,b)=>a+b.count,0);
+  const ratingThisYear=COURSES.filter(c=>c.rating&&new Date(c.rating).getFullYear()===2026).reduce((a,b)=>a+b.count,0);
+  const noRating=COURSES.filter(c=>!c.rating).reduce((a,b)=>a+b.count,0);
+
+  let courseCards='';
+  COURSES.forEach((c,i)=>{
+    courseCards+=`<div class="course-card" id="cc-${i}" onclick="openCourseDetail(${i})">
+      <div class="cc-code">${c.code} <span style="font-weight:400;color:var(--muted)">Lv.${c.level}</span></div>
+      <div class="cc-name">${c.name}</div>
+      <div class="cc-meta">
+        <div><div class="cc-count">${c.count}</div><div style="font-size:10px;color:var(--muted)">นักเรียน</div></div>
+        <div style="text-align:right">
+          <div style="font-size:10px;color:var(--muted)">Rating คาดการณ์</div>
+          <div style="font-family:var(--mono);font-size:11px;color:${c.rating?'#fcd34d':'#64748b'}">${c.rating?fmtDate(c.rating):'รอ กพท.'}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px;">📍 ${c.sangkad}</div>
+        </div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${c.progress}%;background:${progressColor(c.progress)}"></div></div>
+      <div style="font-size:10px;color:var(--muted);margin-top:3px;">OJT Progress ~${c.progress}%</div>
+    </div>`;
+  });
+
+  // Gantt
+  const months=[];
+  const ms=new Date(GANTT_START);
+  while(ms<GANTT_END){
+    if(ms.getMonth()%6===0) months.push({label:String(ms.getFullYear()),pct:dayOffset(ms.toISOString().slice(0,10))});
+    ms.setMonth(ms.getMonth()+1);
+  }
+  const monthRow=months.map(m=>`<div style="position:absolute;left:${m.pct}%;top:0;font-size:9px;color:var(--muted);border-left:1px solid var(--border2);padding-left:2px;height:100%">${m.label}</div>`).join('');
+
+  let ganttRows='';
+  COURSES.forEach(c=>{
+    const th_x=dayOffset(c.theory_start),th_w=dayWidth(c.theory_start,c.theory_end);
+    const oj_x=dayOffset(c.ojt_start),oj_w=dayWidth(c.ojt_start,c.ojt_end);
+    const rt_x=dayOffset(c.rating);
+    const ratingYear=c.rating?new Date(c.rating).getFullYear():null;
+    ganttRows+=`<tr>
+      <td class="gantt-name-cell" title="${c.name}">${c.code}</td>
+      <td class="gantt-count">${c.count}</td>
+      <td><div class="gantt-timeline">
+        ${th_w>0?`<div class="bar-theory" style="left:${th_x}%;width:${th_w}%" title="Theory: ${fmtDate(c.theory_start)} → ${fmtDate(c.theory_end)}"></div>`:''}
+        ${oj_w>0?`<div class="bar-ojt" style="left:${oj_x}%;width:${oj_w}%" title="OJT: ${fmtDate(c.ojt_start)} → ${fmtDate(c.ojt_end)}"></div>`:''}
+        ${rt_x?`<div class="rating-dot" style="left:calc(${rt_x}% - 4px)" title="Rating: ${fmtDate(c.rating)}"></div>`:''}
+      </div></td>
+      <td class="gantt-rating-cell">${ratingYear||'—'}</td>
+    </tr>`;
+  });
+
+  document.getElementById('page-course').innerHTML=`
+    <div class="kpi-row-4" style="margin-bottom:16px;">
+      <div class="kpi c-blue"><div class="kpi-label">หลักสูตรทั้งหมด</div><div class="kpi-value">${COURSES.length}</div><div class="kpi-sub">กำลังดำเนินการ</div></div>
+      <div class="kpi c-amber"><div class="kpi-label">นักเรียนทั้งหมด</div><div class="kpi-value">${totalStudents}</div><div class="kpi-sub">อยู่ในแผนฝึกอบรม</div></div>
+      <div class="kpi c-green"><div class="kpi-label">คาดได้ Rating ปี 2026</div><div class="kpi-value">${ratingThisYear}</div><div class="kpi-sub">ภายในปี 2026</div></div>
+      <div class="kpi c-red"><div class="kpi-label">รอหลักสูตร / กพท.</div><div class="kpi-value">${noRating}</div><div class="kpi-sub">ยังไม่มีวันคาดการณ์</div></div>
+    </div>
+    <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:12px;">📋 Course Cards — คลิกเพื่อดูรายละเอียด</div>
+    <div class="course-grid">${courseCards}</div>
+    <div class="card" style="margin-bottom:14px;">
+      <div class="card-title"><div class="card-title-left"><span class="cdot" style="background:var(--blue)"></span>Gantt Timeline — ระยะเวลาหลักสูตร Theory → OJT → Rating</div></div>
+      <div class="legend" style="margin-bottom:10px;">
+        <div class="legend-item"><div class="ldot" style="background:rgba(59,130,246,0.7)"></div>Theory/Sim</div>
+        <div class="legend-item"><div class="ldot" style="background:rgba(16,185,129,0.65)"></div>OJT</div>
+        <div class="legend-item"><div class="ldot" style="background:#f59e0b;border-radius:50%;width:7px;height:7px"></div>Rating Date</div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="gantt">
+          <thead><tr>
+            <th style="width:140px;text-align:left">หลักสูตร</th>
+            <th style="width:28px;text-align:right">คน</th>
+            <th><div style="position:relative;height:14px;">${monthRow}</div></th>
+            <th style="width:50px;text-align:right">Rating</th>
+          </tr></thead>
+          <tbody>${ganttRows}</tbody>
+        </table>
+      </div>
+    </div>
+    <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:12px;">🔍 รายละเอียดหลักสูตร — คลิก Card ด้านบน</div>
+    <div class="detail-panel-wrap" id="courseDetailWrap">
+      <div class="detail-panel dp-placeholder"><div style="text-align:center;color:var(--muted);font-size:12px;"><div style="font-size:28px;margin-bottom:8px;opacity:0.3">☝</div>คลิก Course Card<br>เพื่อดูรายละเอียด</div></div>
+      <div class="detail-panel dp-placeholder"><div style="text-align:center;color:var(--muted);font-size:12px;">รายชื่อนักเรียนจะแสดงที่นี่</div></div>
+    </div>
+  `;
+}
+
+function openCourseDetail(idx){
+  document.querySelectorAll('.course-card').forEach((c,i)=>c.classList.toggle('selected',i===idx));
+  selectedCourse=idx;
+  const c=COURSES[idx];
+  const students=DATA.staff_students[DATA.locations.find(l=>l.name===c.sangkad||l.name.includes(c.sangkad.replace('.','')))||{id:'sj'}].id||[];
+  const locId=DATA.locations.find(l=>l.name===c.sangkad||c.sangkad.includes(l.name.replace('.','')))||DATA.locations[1];
+  const stuData=(DATA.staff_students[locId.id]||[]).filter(s=>!c.rating||!s.rating||(s.rating&&s.rating===new Date(c.rating).getFullYear())).slice(0,20);
+  const specCount=stuData.filter(s=>s.status&&s.status!=='-').length;
+
+  const wrap=document.getElementById('courseDetailWrap');
+  wrap.innerHTML=`
+    <div class="detail-panel">
+      <div style="font-size:13px;font-weight:600;color:#f1f5f9;margin-bottom:3px;">${c.name}</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:12px;">${c.code} · Level ${c.level} · ${c.sangkad}</div>
+      <div style="margin-bottom:8px;"><div class="phase-label">📖 Theory / Simulation</div><div class="phase-dates">${fmtDate(c.theory_start)} → ${fmtDate(c.theory_end)}</div><div style="font-size:10px;color:var(--muted)">${durMonths(c.theory_start,c.theory_end)}</div></div>
+      <div style="margin-bottom:8px;"><div class="phase-label">🎓 OJT</div><div class="phase-dates">${fmtDate(c.ojt_start)} → ${fmtDate(c.ojt_end)}</div><div style="font-size:10px;color:var(--muted)">${durMonths(c.ojt_start,c.ojt_end)}</div></div>
+      <div style="margin-bottom:12px;"><div class="phase-label">⭐ Rating คาดการณ์</div><div class="phase-dates" style="color:${c.rating?'#fcd34d':'#64748b'}">${fmtDate(c.rating)}</div></div>
+      <div class="status-grid">
+        <div class="status-item"><div class="status-num" style="color:#93c5fd">${c.count}</div><div class="status-lbl">นักเรียนทั้งหมด</div></div>
+        <div class="status-item"><div class="status-num" style="color:#fcd34d">${c.progress}%</div><div class="status-lbl">OJT Progress</div></div>
+        <div class="status-item"><div class="status-num" style="color:#fca5a5">${specCount}</div><div class="status-lbl">สถานะพิเศษ</div></div>
+        <div class="status-item"><div class="status-num" style="color:#6ee7b7">${c.count-specCount}</div><div class="status-lbl">ปกติ</div></div>
+      </div>
+    </div>
+    <div class="detail-panel">
+      <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:10px;">รายชื่อนักเรียน (${c.sangkad})</div>
+      <div class="staff-list">
+        <table class="staff-tbl">
+          <thead><tr><th>#</th><th>ชื่อ-นามสกุล</th><th>ระดับ</th><th>คาดได้ Rating (ค.ศ.)</th><th>สถานะ</th></tr></thead>
+          <tbody>
+            ${stuData.map((s,i)=>`<tr>
+              <td style="color:var(--muted);font-family:var(--mono);font-size:11px;">${i+1}</td>
+              <td style="color:#e2e8f0">${s.name}</td>
+              <td>${lvTag(s.lv)}</td>
+              <td style="font-family:var(--mono);font-size:11px;color:${s.rating?'#6ee7b7':'#64748b'}">${s.rating||'—'}</td>
+              <td>${statusTag(s.status)}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+document.getElementById('updateBadge').textContent = 'ข้อมูล: ' + DATA.updated;
+renderOverview();
+</script>
+</body>
+</html>
